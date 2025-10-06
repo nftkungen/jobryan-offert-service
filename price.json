@@ -1,0 +1,33 @@
+{
+  "moms": 0.25,
+  "rot_rate": 0.30,
+  "rut_rate": 0.50,
+  "min_debitering": 0,
+
+  "zon": { "1": 0, "2": 0, "3": 0 },
+
+  "kvadrat": {
+    "golv": 900,
+    "vagg": 650
+  },
+
+  "finish": {
+    "Microcement":   { "base": 2000, "per_m2": 1200 },
+    "Kakel/klinker": { "base": 5000, "per_m2": 500 },
+    "Våtrumstapet":  { "base": 0,    "per_m2": 0 }
+  },
+
+  "grundmaterial": { "Ja": 2500, "Nej": 0 },
+
+  "vvs": {
+    "dolda_ror": { "Ja": 10000, "Nej": 0 },
+    "wc_typ":    { "Väggmonterad": 13100, "Golvstående": 2100 }
+  },
+
+  "el": {
+    "spot": 1500,
+    "golvv":    { "Ja El": 3000 },
+    "handdukt": { "Ja": 1500 },
+    "nisch":    { "Med belysning": 5500 }
+  }
+}
