@@ -51,6 +51,21 @@ app.get("/health", (_req, res) => res.json({ ok: true }));
 app.get("/api/prices", (_req, res) => {
   res.sendFile(path.join(__dirname, "price.json"));
 });
+// ====== Proxy to Google Apps Script (Sheet calculator) ======
+app.post("/api/estimate/badrum", express.json(), async (req, res) => {
+  try {
+    const r = await fetch(process.env.SHEETS_WEBAPP_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(req.body),
+    });
+    const data = await r.json();
+    res.json(data);
+  } catch (e) {
+    console.error("estimate proxy error:", e);
+    res.status(500).json({ ok:false, error:"proxy_failed" });
+  }
+});
 
 // Submit (stub you can wire to email later)
 app.post("/api/send-offer", async (req, res) => {
