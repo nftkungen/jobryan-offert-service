@@ -1,148 +1,113 @@
-// server.js (ESM)
-// ----------------
+// -------------------------------
+// Jobryan Offert Service Backend
+// -------------------------------
+
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import nodemailer from "nodemailer";
 import multer from "multer";
-import fetch from "node-fetch";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
+// -------------------------------
+// Setup paths
+// -------------------------------
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-app.use(express.static("public"));
 
+// -------------------------------
+// Create Express app
+// -------------------------------
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// ---------- Security & CORS ----------
+// -------------------------------
+// Middleware
+// -------------------------------
 app.use(helmet({ crossOriginResourcePolicy: false }));
-app.use(cors({
-  // for quick testing; later restrict to https://www.jobryan.se
-  origin: "*"
-}));
+app.use(cors({ origin: "*" })); // you can later restrict to https://www.jobryan.se
+app.use(express.json({ limit: "2mb" }));
+app.use(express.urlencoded({ extended: true }));
+app.use(rateLimit({ windowMs: 60 * 1000, max: 300 }));
 
-app.use(rateLimit({ windowMs: 60 * 1000, max: 30 }));
+// -------------------------------
+// Static files (frontend)
+// -------------------------------
+app.use(express.static("public"));
 
-// Optional: serve static files in public/
-app.use(express.static(path.join(__dirname, "public")));
-
-// Multer for files
-const upload = multer({
-  limits: { fileSize: 10 * 1024 * 1024, files: 5 }, // 10MB, 5 files
-  fileFilter: (req, file, cb) => {
-    const ok = file.mimetype.startsWith("image/") || file.mimetype === "application/pdf";
-    cb(ok ? null : new Error("Otillåten filtyp"), ok);
-  },
+// -------------------------------
+// Simple health check
+// -------------------------------
+app.get("/health", (req, res) => {
+  res.json({ ok: true });
 });
 
-// Nodemailer transporter
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT || 587),
-  secure: Number(process.env.SMTP_PORT) === 465,
-  auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-});
-
-// ---------- Helpers ----------
-function loadPricesSync() {
-  const p = path.join(__dirname, "price.json"); // price.json in repo root
-  const raw = fs.readFileSync(p, "utf8");
-  return JSON.parse(raw);
-}
-
-// ---------- Routes ----------
-app.get("/health", (req, res) => res.json({ ok: true }));
-
-// return price list to the frontend
+// -------------------------------
+// Price data endpoint
+// -------------------------------
 app.get("/api/prices", (req, res) => {
   try {
-    const prices = loadPricesSync();
-    res.json(prices);
+    const dataPath = path.join(__dirname, "price.json");
+    const data = JSON.parse(fs.readFileSync(dataPath, "utf8"));
+    res.json(data);
   } catch (err) {
-    console.error("price load error:", err);
-    res.status(500).json({ ok: false, error: "Could not load prices" });
+    console.error("Error reading price.json:", err);
+    res.status(500).json({ error: "Could not read price data." });
   }
 });
 
-// accept form submit and send email
-app.post(
-  "/api/send-offer",
-  upload.array("files", 5),
-  express.urlencoded({ extended: true }),
-  async (req, res) => {
-    try {
-      const fields = req.body || {};
-      const files = req.files || [];
+// -------------------------------
+// File upload (optional)
+// -------------------------------
+const upload = multer({ dest: "uploads/" });
 
-      // honeypot
-      if (fields.company && fields.company.trim() !== "") {
-        return res.status(400).json({ ok: false, error: "Spam blocked" });
-      }
+// -------------------------------
+// Email sending endpoint
+// -------------------------------
+app.post("/api/send-offer", upload.none(), async (req, res) => {
+  try {
+    const { name, email, message } = req.body;
 
-      // minimal required
-      const required = ["namn", "epost", "adress", "postnr"];
-      const missing = required.filter((k) => !String(fields[k] || "").trim());
-      if (missing.length) {
-        return res.status(400).json({ ok: false, error: "Fyll i namn, e-post, adress och postnummer." });
-      }
+    // --- set up transporter ---
+    const transporter = nodemailer.createTransport({
+      host: "smtp.one.com", // change to your email provider’s SMTP
+      port: 465,
+      secure: true,
+      auth: {
+        user: "info@jobryan.se", // your email
+        pass: process.env.EMAIL_PASS || "yourpassword", // add real password in Render environment vars
+      },
+    });
 
-      // optional reCAPTCHA v3
-      if (process.env.RECAPTCHA_SECRET && fields._recaptcha_token) {
-        const verifyUrl = "https://www.google.com/recaptcha/api/siteverify";
-        const params = new URLSearchParams({
-          secret: process.env.RECAPTCHA_SECRET,
-          response: fields._recaptcha_token,
-        });
-        const resp = await fetch(verifyUrl, { method: "POST", body: params });
-        const data = await resp.json();
-        if (!data.success || (data.score !== undefined && data.score < (Number(process.env.RECAPTCHA_MIN_SCORE || 0.4)))) {
-          return res.status(400).json({ ok: false, error: "reCAPTCHA verification failed" });
-        }
-      }
+    // --- email details ---
+    const mailOptions = {
+      from: `"Offertförfrågan" <info@jobryan.se>`,
+      to: "info@jobryan.se",
+      subject: `Ny offertförfrågan från ${name || "kund"}`,
+      text: `Från: ${name}\nE-post: ${email}\n\nMeddelande:\n${message}`,
+    };
 
-      // compose plain text
-      const lines = ["Ny offertförfrågan från hemsidan", "--------------------------------", ""];
-      for (const [k, v] of Object.entries(fields)) {
-        if (String(k).startsWith("_")) continue;
-        lines.push(`${k}: ${Array.isArray(v) ? v.join(", ") : v}`);
-      }
-      const text = lines.join("\n");
-
-      const attachments = files.map((f) => ({
-        filename: f.originalname,
-        content: f.buffer,
-        contentType: f.mimetype,
-      }));
-
-      // send to office inbox
-      await transporter.sendMail({
-        from: process.env.FROM_EMAIL,
-        to: process.env.TO_EMAIL, // info@jobryan.se
-        subject: fields._meta_title || "Ny offertförfrågan",
-        text,
-        attachments,
-      });
-
-      // auto-ack to customer
-      if (fields.epost) {
-        await transporter.sendMail({
-          from: process.env.FROM_EMAIL,
-          to: fields.epost,
-          subject: "Tack för din offertförfrågan",
-          text: `Hej ${fields.namn || ""}!\n\nTack för din förfrågan till Jobryan Bygg. Vi återkommer snart.\n\nMvh\nJobryan Bygg`,
-        });
-      }
-
-      res.json({ ok: true });
-    } catch (err) {
-      console.error("send-offer error:", err);
-      res.status(500).json({ ok: false, error: "Serverfel, försök igen senare." });
-    }
+    await transporter.sendMail(mailOptions);
+    res.json({ success: true, message: "Offert skickad!" });
+  } catch (err) {
+    console.error("Email error:", err);
+    res.status(500).json({ success: false, message: "Kunde inte skicka e-post." });
   }
-);
+});
 
-app.listen(PORT, () => console.log(`Server running on :${PORT}`));
+// -------------------------------
+// 404 fallback (redirect to index.html for frontend routing)
+// -------------------------------
+app.use((req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+// -------------------------------
+// Start server
+// -------------------------------
+app.listen(PORT, () => {
+  console.log(`✅ Server running on port ${PORT}`);
+});
