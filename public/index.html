@@ -1,52 +1,54 @@
 <!DOCTYPE html>
 <html lang="sv">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Jobryan – Offertförfrågan</title>
-<style>
-  :root{
-    --bg:#f7f8fb;--card:#fff;--ink:#101626;--muted:#64708a;--line:#e8ecf2;
-    --accent:#f25730;--accent-weak:#ffe7df;--accent-dark:#d44827;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink)}
-  .wrap{max-width:900px;margin:28px auto;padding:0 16px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:22px;box-shadow:0 10px 30px rgba(16,22,38,.06);overflow:hidden}
-  header{padding:28px;text-align:center}
-  header h1{margin:6px 0 4px;font-size:1.9rem;color:var(--accent)}
-  header .sub{color:var(--muted);font-size:.95rem}
-  .progress{display:flex;align-items:center;gap:12px;padding:12px 20px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:#fff9f7}
-  .bar{flex:1;height:10px;background:#f5dcd3;border-radius:999px;overflow:hidden}
-  .bar>span{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
-  .label{font-weight:700;font-size:.9rem}
-  main{padding:20px}
-  .step{display:none}
-  .step.active{display:block}
-  .section{margin:16px 0;padding:18px;border:1px solid var(--line);border-radius:18px;background:#fff}
-  .section h2{margin:0 0 10px;font-size:1.15rem;color:var(--accent);text-align:center}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  @media(max-width:720px){.grid{grid-template-columns:1fr}}
-  label.lbl{display:block;font-weight:600;margin:8px 0 6px}
-  .field{border:2px solid var(--line);border-radius:14px;display:flex;align-items:center;padding:12px 14px;background:#fff}
-  .field input,.field textarea,.field select{border:0;outline:0;background:transparent;width:100%;font-size:1rem}
-  .field textarea{min-height:110px;resize:vertical}
-  .field:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-weak)}
-  .chips{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
-  .chip{display:flex;align-items:center;justify-content:center;border:2px solid var(--line);border-radius:14px;padding:14px;font-weight:600;cursor:pointer;user-select:none;background:#fff}
-  .chip input{display:none}
-  .chip:has(input:checked){border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-weak)}
-  .chip input:checked+span{color:var(--accent)}
-  .row{display:flex;gap:10px;flex-wrap:wrap}
-  .btn{border:2px solid var(--line);background:#fff;border-radius:999px;padding:12px 18px;font-weight:700;cursor:pointer}
-  .btn.primary{background:var(--accent);color:#fff;border-color:transparent}
-  .btn.primary:hover{background:var(--accent-dark)}
-  .actions{display:flex;justify-content:space-between;gap:12px;padding:14px 18px;border-top:1px solid var(--line);background:#fff}
-  .summary{background:#fff;border:1px dashed var(--line);border-radius:16px;padding:14px}
-  .money{font-weight:800}
-  .hint{color:var(--muted);font-size:.9rem}
-  .hidden{display:none !important}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Jobryan – Offertförfrågan</title>
+  <style>
+    :root{
+      --bg:#f7f8fb;--card:#fff;--ink:#101626;--muted:#64708a;--line:#e8ecf2;
+      --accent:#f25730;--accent-weak:#ffe7df;--accent-dark:#d44827;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+    .wrap{max-width:900px;margin:28px auto;padding:0 16px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:22px;box-shadow:0 10px 30px rgba(16,22,38,.06);overflow:hidden}
+    header{padding:28px;text-align:center}
+    header h1{margin:6px 0 4px;font-size:1.9rem;color:var(--accent)}
+    header .sub{color:var(--muted);font-size:.95rem}
+    .progress{display:flex;align-items:center;gap:12px;padding:12px 20px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:#fff9f7}
+    .bar{flex:1;height:10px;background:#f5dcd3;border-radius:999px;overflow:hidden}
+    .bar>span{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+    .label{font-weight:700;font-size:.9rem}
+    main{padding:20px}
+    .step{display:none}
+    .step.active{display:block}
+    .section{margin:16px 0;padding:18px;border:1px solid var(--line);border-radius:18px;background:#fff}
+    .section h2{margin:0 0 10px;font-size:1.15rem;color:var(--accent);text-align:center}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media(max-width:720px){.grid{grid-template-columns:1fr}}
+    label.lbl{display:block;font-weight:600;margin:8px 0 6px}
+    .field{border:2px solid var(--line);border-radius:14px;display:flex;align-items:center;padding:12px 14px;background:#fff}
+    .field input,.field textarea,.field select{border:0;outline:0;background:transparent;width:100%;font-size:1rem}
+    .field textarea{min-height:110px;resize:vertical}
+    .field:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-weak)}
+    .chips{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+    .chip{display:flex;align-items:center;justify-content:center;border:2px solid var(--line);border-radius:14px;padding:14px;font-weight:600;cursor:pointer;user-select:none;background:#fff}
+    .chip input{display:none}
+    .chip:has(input:checked){border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-weak)}
+    .chip input:checked+span{color:var(--accent)}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .btn{border:2px solid var(--line);background:#fff;border-radius:999px;padding:12px 18px;font-weight:700;cursor:pointer}
+    .btn.primary{background:var(--accent);color:#fff;border-color:transparent}
+    .btn.primary:hover{background:var(--accent-dark)}
+    .actions{display:flex;justify-content:space-between;gap:12px;padding:14px 18px;border-top:1px solid var(--line);background:#fff}
+    .summary{background:#fff;border:1px dashed var(--line);border-radius:16px;padding:14px}
+    .money{font-weight:800}
+    .hint{color:var(--muted);font-size:.9rem}
+    .hidden{display:none !important}
+  </style>
+  <!-- CSP-safe external script -->
+  <script src="/app.js" defer></script>
 </head>
 <body>
 <div class="wrap">
@@ -252,63 +254,14 @@
       </section>
     </main>
 
-    <!-- ACTIONS (onclick uses robust go() so it never gets stuck) -->
     <div class="actions">
-      <button class="btn" id="back" type="button" onclick="go(-1)">Tillbaka</button>
+      <button class="btn" id="back" type="button">Tillbaka</button>
       <div class="row">
-        <button class="btn" id="save" type="button" onclick="navigator.clipboard.writeText(JSON.stringify(state))">Spara</button>
-        <button class="btn primary" id="next" type="button" onclick="go(1)">Nästa</button>
+        <button class="btn" id="save" type="button">Spara</button>
+        <button class="btn primary" id="next" type="button">Nästa</button>
       </div>
     </div>
   </div>
 </div>
-
-<script>
-/* ---- HARDENED WIZARD NAV SHIM ----
-   Forces Next/Back to work even if other code fails.
-   Put this right before </body>.
-------------------------------------*/
-(function () {
-  const steps = Array.from(document.querySelectorAll('.step'));
-  if (!steps.length) { console.error('[wizard] No .step sections found'); return; }
-
-  // find current (or default to first)
-  let idx = steps.findIndex(s => s.classList.contains('active'));
-  if (idx < 0) idx = 0;
-
-  const pbar  = document.getElementById('pbar');
-  const plabel= document.getElementById('plabel');
-  const back  = document.getElementById('back');
-  const next  = document.getElementById('next');
-
-  function set(n){
-    steps.forEach((s,i)=>s.classList.toggle('active', i===n));
-    if (pbar)  pbar.style.width = ((n+1)/steps.length*100)+'%';
-    if (plabel) plabel.textContent = `Steg ${n+1} av ${steps.length}`;
-    if (back) back.disabled = (n===0);
-    if (next) next.textContent = (n===steps.length-1) ? 'Skicka' : 'Nästa';
-  }
-
-  // public API used by onclicks (and by us below)
-  window.go = function (delta) {
-    try {
-      idx = Math.max(0, Math.min(steps.length-1, idx + delta));
-      set(idx);
-    } catch (e) { console.error('[wizard] go() error', e); }
-  };
-
-  // Attach handlers in capture phase so we win even if others are broken
-  back?.addEventListener('click',  e => { e.preventDefault(); window.go(-1); }, {capture:true});
-  next?.addEventListener('click',  e => {
-    e.preventDefault();
-    // if you want real submit on last step, remove the line below and call your submit here
-    if (idx < steps.length-1) window.go(1);
-  }, {capture:true});
-
-  // initial paint
-  set(idx);
-})();
-</script>
-
 </body>
 </html>
