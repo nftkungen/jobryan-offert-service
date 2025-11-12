@@ -11,7 +11,7 @@
     }
     *{box-sizing:border-box}
     body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink)}
-    .wrap{max-width:900px;margin:28px auto;padding:0 16px}
+    .wrap{max-width:980px;margin:28px auto;padding:0 16px}
     .card{background:var(--card);border:1px solid var(--line);border-radius:22px;box-shadow:0 10px 30px rgba(16,22,38,.06);overflow:hidden}
     header{padding:28px;text-align:center}
     header h1{margin:6px 0 4px;font-size:1.9rem;color:var(--accent)}
@@ -26,17 +26,19 @@
     .section{margin:16px 0;padding:18px;border:1px solid var(--line);border-radius:18px;background:#fff}
     .section h2{margin:0 0 10px;font-size:1.15rem;color:var(--accent);text-align:center}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    @media(max-width:720px){.grid{grid-template-columns:1fr}}
+    @media(max-width:860px){.grid{grid-template-columns:1fr}}
     label.lbl{display:block;font-weight:600;margin:8px 0 6px}
     .field{border:2px solid var(--line);border-radius:14px;display:flex;align-items:center;padding:12px 14px;background:#fff}
     .field input,.field textarea,.field select{border:0;outline:0;background:transparent;width:100%;font-size:1rem}
     .field textarea{min-height:110px;resize:vertical}
     .field:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-weak)}
-    .chips{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
-    .chip{display:flex;align-items:center;justify-content:center;border:2px solid var(--line);border-radius:14px;padding:14px;font-weight:600;cursor:pointer;user-select:none;background:#fff}
-    .chip input{display:none}
-    .chip:has(input:checked){border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-weak)}
-    .chip input:checked+span{color:var(--accent)}
+    .items{display:grid;grid-template-columns:1fr 130px 140px;gap:10px;align-items:center}
+    .item{display:contents}
+    .badge{display:inline-block;padding:4px 8px;border:1px solid var(--line);border-radius:999px;font-size:.8rem;color:#475569;background:#f8fafc}
+    .price{font-weight:700;text-align:right}
+    .qty{display:flex;gap:6px;align-items:center;justify-content:flex-end}
+    .qty button{border:1px solid var(--line);background:#fff;border-radius:10px;width:32px;height:32px;cursor:pointer}
+    .qty input{width:80px;text-align:right;border:2px solid var(--line);border-radius:10px;padding:6px 8px}
     .row{display:flex;gap:10px;flex-wrap:wrap}
     .btn{border:2px solid var(--line);background:#fff;border-radius:999px;padding:12px 18px;font-weight:700;cursor:pointer}
     .btn.primary{background:var(--accent);color:#fff;border-color:transparent}
@@ -46,8 +48,8 @@
     .money{font-weight:800}
     .hint{color:var(--muted);font-size:.9rem}
     .hidden{display:none !important}
+    .tot-row{display:flex;justify-content:space-between;margin-top:8px}
   </style>
-  <!-- CSP-safe external script -->
   <script src="/app.js" defer></script>
 </head>
 <body>
@@ -55,203 +57,16 @@
   <div class="card">
     <header>
       <h1>Offertförfrågan</h1>
-      <div class="sub">En fråga i taget – max 3 per sida för enkelhet. Orange Jobryan-stil.</div>
+      <div class="sub">Allt i prislistan – välj mängder. Vi återkommer med exakt offert.</div>
     </header>
 
     <div class="progress">
       <div class="bar"><span id="pbar"></span></div>
-      <div class="label" id="plabel">Steg 1 av 9</div>
+      <div class="label" id="plabel">Laddar…</div>
     </div>
 
     <main id="steps">
-      <!-- 1. Projektets inriktning -->
-      <section class="step active">
-        <div class="section">
-          <h2>Vad vill du ha hjälp med?</h2>
-          <div class="chips" id="projectTypes">
-            <label class="chip"><input type="checkbox" name="typer" value="Badrum"><span>Badrum</span></label>
-            <label class="chip"><input type="checkbox" name="typer" value="Kök"><span>Kök</span></label>
-            <label class="chip"><input type="checkbox" name="typer" value="Totalrenovering"><span>Totalrenovering</span></label>
-            <label class="chip"><input type="checkbox" name="typer" value="Målning"><span>Målning</span></label>
-            <label class="chip"><input type="checkbox" name="typer" value="Golv"><span>Golv</span></label>
-            <label class="chip"><input type="checkbox" name="typer" value="Vägg/Tak"><span>Vägg/Tak</span></label>
-            <label class="chip"><input type="checkbox" name="typer" value="Annat"><span>Annat</span></label>
-          </div>
-        </div>
-        <div class="section">
-          <h2>Beskriv kort</h2>
-          <label class="lbl">Önskemål / material / länkar (valfritt)</label>
-          <div class="field"><textarea id="ovrigt" placeholder="Beskrivning"></textarea></div>
-        </div>
-      </section>
-
-      <!-- 2. Adress & zon -->
-      <section class="step">
-        <div class="section">
-          <h2>Adress & zon</h2>
-          <label class="lbl">Adress</label>
-          <div class="field"><input id="adress" placeholder="Gatuadress, ort" /></div>
-          <div class="grid">
-            <div>
-              <label class="lbl">Postnummer</label>
-              <div class="field"><input id="postnr" placeholder="123 45" /></div>
-            </div>
-            <div>
-              <label class="lbl">Zon (påverkar restid)</label>
-              <div class="chips">
-                <label class="chip"><input type="radio" name="zon" value="1" checked><span>Zon 1</span></label>
-                <label class="chip"><input type="radio" name="zon" value="2"><span>Zon 2</span></label>
-                <label class="chip"><input type="radio" name="zon" value="3"><span>Zon 3</span></label>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 3. Ytor -->
-      <section class="step">
-        <div class="section">
-          <h2>Ytor (m²)</h2>
-          <div class="grid">
-            <div>
-              <label class="lbl">Kvm golv</label>
-              <div class="field"><input id="kvm_golv" type="number" min="0" step="0.1" placeholder="ex 5" /></div>
-            </div>
-            <div>
-              <label class="lbl">Kvm vägg</label>
-              <div class="field"><input id="kvm_vagg" type="number" min="0" step="0.1" placeholder="ex 15" /></div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 4. Snickerier / ytskikt -->
-      <section class="step">
-        <div class="section">
-          <h2>Ytskikt & grundmaterial</h2>
-          <label class="lbl">Ytskikt</label>
-          <div class="chips">
-            <label class="chip"><input type="radio" name="finish" value="Microcement"><span>Microcement</span></label>
-            <label class="chip"><input type="radio" name="finish" value="Kakel/klinker" checked><span>Kakel/klinker</span></label>
-            <label class="chip"><input type="radio" name="finish" value="Våtrumstapet"><span>Våtrumstapet</span></label>
-          </div>
-          <label class="lbl" style="margin-top:10px">Grundmaterial</label>
-          <div class="chips">
-            <label class="chip"><input type="radio" name="grundmat" value="Ja" checked><span>Ja</span></label>
-            <label class="chip"><input type="radio" name="grundmat" value="Nej"><span>Nej</span></label>
-          </div>
-        </div>
-      </section>
-
-      <!-- 5. VVS -->
-      <section class="step">
-        <div class="section">
-          <h2>VVS</h2>
-          <label class="lbl">Dolda rör (arbete)</label>
-          <div class="chips">
-            <label class="chip"><input type="radio" name="dolda_ror" value="Ja"><span>Ja</span></label>
-            <label class="chip"><input type="radio" name="dolda_ror" value="Nej" checked><span>Nej</span></label>
-          </div>
-          <label class="lbl" style="margin-top:10px">WC</label>
-          <div class="chips">
-            <label class="chip"><input type="radio" name="wc_typ" value="Väggmonterad" checked><span>Väggmonterad</span></label>
-            <label class="chip"><input type="radio" name="wc_typ" value="Golvstående"><span>Golvstående</span></label>
-          </div>
-        </div>
-      </section>
-
-      <!-- 6. El -->
-      <section class="step">
-        <div class="section">
-          <h2>El & belysning</h2>
-          <div class="grid">
-            <div>
-              <label class="lbl">Spotlights (antal)</label>
-              <div class="field"><input id="spots" type="number" min="0" step="1" value="0" /></div>
-            </div>
-            <div>
-              <label class="lbl">Golvvärme</label>
-              <div class="chips">
-                <label class="chip"><input type="radio" name="golvv" value="Ja El"><span>Ja</span></label>
-                <label class="chip"><input type="radio" name="golvv" value="Nej" checked><span>Nej</span></label>
-              </div>
-            </div>
-          </div>
-          <div class="grid">
-            <div>
-              <label class="lbl">Handdukstork</label>
-              <div class="chips">
-                <label class="chip"><input type="radio" name="handdukt" value="Ja"><span>Ja</span></label>
-                <label class="chip"><input type="radio" name="handdukt" value="Nej" checked><span>Nej</span></label>
-              </div>
-            </div>
-            <div>
-              <label class="lbl">Nisch</label>
-              <div class="chips">
-                <label class="chip"><input type="radio" name="nisch" value="Med belysning"><span>Med belysning</span></label>
-                <label class="chip"><input type="radio" name="nisch" value="Utan belysning" checked><span>Utan belysning</span></label>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 7. ROT/RUT -->
-      <section class="step">
-        <div class="section">
-          <h2>Skattereduktion</h2>
-          <label class="lbl">Välj om ROT/RUT ska tillämpas</label>
-          <div class="chips">
-            <label class="chip"><input type="radio" name="tax_deduction" value="Ingen" checked><span>Ingen</span></label>
-            <label class="chip"><input type="radio" name="tax_deduction" value="ROT"><span>ROT</span></label>
-            <label class="chip"><input type="radio" name="tax_deduction" value="RUT"><span>RUT</span></label>
-          </div>
-          <div class="grid" style="margin-top:10px">
-            <div>
-              <label class="lbl">Antal personer som nyttjar avdraget</label>
-              <div class="field"><input id="ded_persons" type="number" min="1" max="4" value="1" /></div>
-            </div>
-          </div>
-          <div class="hint">ROT 30%, RUT 50%. Tak per person (preliminärt): ROT 50 000 kr, RUT 75 000 kr.</div>
-        </div>
-      </section>
-
-      <!-- 8. Kontakt & uppladdning -->
-      <section class="step">
-        <div class="section">
-          <h2>Kontakt & uppladdning</h2>
-          <div class="grid">
-            <div>
-              <label class="lbl">Namn</label>
-              <div class="field"><input id="namn" placeholder="För- och efternamn"/></div>
-            </div>
-            <div>
-              <label class="lbl">E-post</label>
-              <div class="field"><input id="epost" type="email" placeholder="namn@exempel.se"/></div>
-            </div>
-          </div>
-          <label class="lbl" style="margin-top:10px">Telefon (valfritt)</label>
-          <div class="field"><input id="telefon" placeholder="+46 …"/></div>
-
-          <label class="lbl" style="margin-top:10px">Bilder/filer (valfritt, PDF/jpg/png)</label>
-          <div class="field"><input id="filer" type="file" multiple accept=".pdf,image/*"/></div>
-        </div>
-      </section>
-
-      <!-- 9. Summering -->
-      <section class="step">
-        <div class="section">
-          <h2>Summering & preliminär prisbild</h2>
-          <div class="summary" id="summaryBox">
-            <div>Arbete: <span class="money" id="sArbete">–</span></div>
-            <div>Material: <span class="money" id="sMat">–</span></div>
-            <div>Moms: <span class="money" id="sMoms">–</span></div>
-            <div><b>Totalt inkl. moms:</b> <span class="money" id="sTot">–</span></div>
-            <div id="sDedRow" class="hidden">Preliminär skattereduktion: <span class="money" id="sDed">–</span><br><b>Att betala efter avdrag:</b> <span class="money" id="sAfter">–</span></div>
-            <div class="hint" style="margin-top:6px">Detta är en indikation baserad på dina val. Vi återkommer med exakt offert.</div>
-          </div>
-        </div>
-      </section>
+      <!-- Steps are injected dynamically based on price.json categories -->
     </main>
 
     <div class="actions">
