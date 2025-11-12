@@ -271,7 +271,21 @@
 const SEND_ENDPOINT = "https://jobryan-offert-service.onrender.com/api/send-offer";
 const PRICE_URL     = "https://jobryan-offert-service.onrender.com/api/prices";
 
-let PRICE = null;
+/* ---- Safe defaults so calc() never crashes ---- */
+let PRICE = {
+  moms: 0.25,
+  rot_rate: 0.30,
+  rut_rate: 0.50,
+  zon: { "1": 0, "2": 0, "3": 0 },
+  kvadrat: { golv: 0, vagg: 0 },
+  finish: {},
+  grundmaterial: { "Ja": 0, "Nej": 0 },
+  vvs: { dolda_ror: { "Ja": 0, "Nej": 0 }, wc_typ: { "Väggmonterad": 0, "Golvstående": 0 } },
+  el: { spot: 0, golvv: { "Ja El": 0, "Nej": 0 }, handdukt: { "Ja": 0, "Nej": 0 }, nisch: { "Med belysning": 0, "Utan belysning": 0 } },
+  min_debitering: 0
+};
+let priceReady = false;
+
 const steps = Array.from(document.querySelectorAll('.step'));
 const pbar = document.getElementById('pbar');
 const plabel = document.getElementById('plabel');
@@ -299,32 +313,32 @@ function getChecks(name){ return Array.from(document.querySelectorAll(`input[nam
 
 function syncFromUI(){
   state.typer = getChecks('typer');
-  state.ovrigt = document.getElementById('ovrigt').value.trim();
+  const o = document.getElementById('ovrigt'); if (o) state.ovrigt = o.value.trim();
 
-  state.adress = document.getElementById('adress').value.trim();
-  state.postnr = document.getElementById('postnr').value.trim();
+  const a = document.getElementById('adress'); if (a) state.adress = a.value.trim();
+  const p = document.getElementById('postnr'); if (p) state.postnr = p.value.trim();
   state.zon = getChecked('zon') || "1";
 
-  state.kvm_golv = num(document.getElementById('kvm_golv').value);
-  state.kvm_vagg = num(document.getElementById('kvm_vagg').value);
+  const kg = document.getElementById('kvm_golv'); state.kvm_golv = kg? num(kg.value) : 0;
+  const kv = document.getElementById('kvm_vagg'); state.kvm_vagg = kv? num(kv.value) : 0;
 
-  state.finish   = getChecked('finish') || "Kakel/klinker";
-  state.grundmat = getChecked('grundmat') || "Ja";
+  state.finish   = getChecked('finish') || state.finish;
+  state.grundmat = getChecked('grundmat') || state.grundmat;
 
-  state.dolda_ror = getChecked('dolda_ror') || "Nej";
-  state.wc_typ    = getChecked('wc_typ')    || "Väggmonterad";
+  state.dolda_ror = getChecked('dolda_ror') || state.dolda_ror;
+  state.wc_typ    = getChecked('wc_typ')    || state.wc_typ;
 
-  state.spots    = num(document.getElementById('spots').value);
-  state.golvv    = getChecked('golvv')    || "Nej";
-  state.handdukt = getChecked('handdukt') || "Nej";
-  state.nisch    = getChecked('nisch')    || "Utan belysning";
+  const sp = document.getElementById('spots'); state.spots = sp? num(sp.value) : 0;
+  state.golvv    = getChecked('golvv')    || state.golvv;
+  state.handdukt = getChecked('handdukt') || state.handdukt;
+  state.nisch    = getChecked('nisch')    || state.nisch;
 
-  state.tax_deduction = getChecked('tax_deduction') || "Ingen";
-  state.ded_persons   = Math.max(1, Math.min(4, num(document.getElementById('ded_persons').value || 1)));
+  state.tax_deduction = getChecked('tax_deduction') || state.tax_deduction;
+  const dp = document.getElementById('ded_persons'); state.ded_persons = dp? Math.max(1, Math.min(4, num(dp.value || 1))) : 1;
 
-  state.namn = (document.getElementById('namn').value || "").trim();
-  state.epost= (document.getElementById('epost').value || "").trim();
-  state.telefon = (document.getElementById('telefon').value || "").trim();
+  const n = document.getElementById('namn'); state.namn = n? (n.value||"").trim() : "";
+  const e = document.getElementById('epost'); state.epost = e? (e.value||"").trim() : "";
+  const t = document.getElementById('telefon'); state.telefon = t? (t.value||"").trim() : "";
 }
 
 function calc(){
@@ -338,31 +352,23 @@ function calc(){
 
   let arbete = 0, material = 0;
 
-  // zonpåslag
   arbete += zonCost;
-
-  // ytor
   arbete += kvmG * (PRICE.kvadrat?.golv || 0);
   arbete += kvmV * (PRICE.kvadrat?.vagg || 0);
 
-  // ytskikt
   const fin = PRICE.finish?.[state.finish] || { base:0, per_m2:0 };
   arbete += (fin.base||0) + area*(fin.per_m2||0);
 
-  // materialpaket
   material += (PRICE.grundmaterial?.[state.grundmat] || 0);
 
-  // VVS
   arbete += (PRICE.vvs?.dolda_ror?.[state.dolda_ror] || 0);
   arbete += (PRICE.vvs?.wc_typ?.[state.wc_typ] || 0);
 
-  // El
   arbete += state.spots * (PRICE.el?.spot || 0);
   if (state.golvv === "Ja El")   arbete += (PRICE.el?.golvv?.["Ja El"] || 0);
   if (state.handdukt === "Ja")   arbete += (PRICE.el?.handdukt?.Ja || 0);
   if (state.nisch === "Med belysning") arbete += (PRICE.el?.nisch?.["Med belysning"] || 0);
 
-  // min debitering?
   const minDeb = PRICE.min_debitering || 0;
   if (minDeb && (arbete + material) < minDeb){
     const diff = minDeb - (arbete + material);
@@ -373,13 +379,12 @@ function calc(){
   const momsBelopp = exmoms * moms;
   const inklmoms = exmoms + momsBelopp;
 
-  // ROT/RUT
   let prelimDed=0, after=inklmoms;
   const rate = state.tax_deduction === "ROT" ? rotRate : state.tax_deduction === "RUT" ? rutRate : 0;
   if (rate>0){
-    const arbeidInkl = arbete*(1+moms);
+    const arbeteInkl = arbete*(1+moms);
     const capPerPerson = state.tax_deduction === "ROT" ? 50000 : 75000;
-    prelimDed = Math.min(state.ded_persons*capPerPerson, Math.round(arbeitInkl*rate));
+    prelimDed = Math.min(state.ded_persons*capPerPerson, Math.round(arbeteInkl*rate));
     after = Math.max(0, inklmoms - prelimDed);
   }
 
@@ -387,25 +392,31 @@ function calc(){
 }
 
 function render(){
+  // allow navigation even if prices failed to load
   steps.forEach((s,idx)=>s.classList.toggle('active', idx===i));
   const pct = ((i+1)/steps.length)*100;
   pbar.style.width = pct+'%';
   plabel.textContent = `Steg ${i+1} av ${steps.length}`;
 
-  // update summary
   syncFromUI();
-  const r = calc();
-  const sDedRow = document.getElementById('sDedRow');
-  document.getElementById('sArbete').textContent = money(r.arbete);
-  document.getElementById('sMat').textContent    = money(r.material);
-  document.getElementById('sMoms').textContent   = money(r.momsBelopp);
-  document.getElementById('sTot').textContent    = money(r.inklmoms);
-  if (r.prelimDed>0){
-    sDedRow.classList.remove('hidden');
-    document.getElementById('sDed').textContent  = money(r.prelimDed);
-    document.getElementById('sAfter').textContent= money(r.after);
-  } else {
-    sDedRow.classList.add('hidden');
+  try{
+    const r = calc();
+    const sDedRow = document.getElementById('sDedRow');
+    const set = (id,val)=>{ const el = document.getElementById(id); if (el) el.textContent = val; };
+    set('sArbete', money(r.arbete));
+    set('sMat',    money(r.material));
+    set('sMoms',   money(r.momsBelopp));
+    set('sTot',    money(r.inklmoms));
+    if (r.prelimDed>0){
+      sDedRow?.classList.remove('hidden');
+      set('sDed',   money(r.prelimDed));
+      set('sAfter', money(r.after));
+    } else {
+      sDedRow?.classList.add('hidden');
+    }
+  }catch(e){
+    // swallow calc errors (e.g. PRICE not loaded yet)
+    console.warn('Price calc pending:', e.message);
   }
 
   backBtn.disabled = (i===0);
@@ -419,15 +430,12 @@ nextBtn.addEventListener('click', async ()=>{
   syncFromUI();
   try {
     const fd = new FormData();
-    // meta
     fd.append('_meta_title','Offertförfrågan');
-    // fields
     for (const [k,v] of Object.entries(state)){
       fd.append(k, Array.isArray(v)? v.join(', ') : String(v));
     }
-    // files
-    const files = document.getElementById('filer').files;
-    for (const f of files) fd.append('files', f);
+    const filesEl = document.getElementById('filer');
+    if (filesEl) for (const f of filesEl.files) fd.append('files', f);
 
     nextBtn.disabled = true; nextBtn.textContent = 'Skickar…';
     const res = await fetch(SEND_ENDPOINT, { method:'POST', body: fd });
@@ -443,20 +451,22 @@ nextBtn.addEventListener('click', async ()=>{
 });
 
 async function loadPrices(){
-  const r = await fetch(PRICE_URL, {cache:'no-store'});
-  if(!r.ok) throw new Error('Kunde inte ladda prislistan');
-  PRICE = await r.json();
+  try{
+    const r = await fetch(PRICE_URL, {cache:'no-store'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    PRICE = await r.json();
+    priceReady = true;
+  }catch(e){
+    console.warn('Kunde inte ladda prislistan, använder defaults:', e.message);
+    priceReady = false; // still fine—UI works; prices show as 0
+  }finally{
+    render(); // ensure first render happens regardless
+  }
 }
 
-(async () => {
-  try {
-    await loadPrices();
-    render();
-  } catch (e){
-    console.error(e);
-    alert('Kunde inte ladda prislistan. Testa igen.');
-  }
-})();
+// kick off
+loadPrices();
 </script>
+
 </body>
 </html>
