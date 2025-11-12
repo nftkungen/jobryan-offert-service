@@ -1,113 +1,67 @@
-// -------------------------------
-// Jobryan Offert Service Backend
-// -------------------------------
-
+// server.js  (Node 18+, ESM)
 import express from "express";
-import cors from "cors";
-import helmet from "helmet";
-import rateLimit from "express-rate-limit";
-import nodemailer from "nodemailer";
-import multer from "multer";
-import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import helmet from "helmet";
+import cors from "cors";
+import rateLimit from "express-rate-limit";
 
-// -------------------------------
-// Setup paths
-// -------------------------------
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname  = path.dirname(__filename);
 
-// -------------------------------
-// Create Express app
-// -------------------------------
-const app = express();
+const app  = express();
 const PORT = process.env.PORT || 8080;
 
-// -------------------------------
-// Middleware
-// -------------------------------
-app.use(helmet({ crossOriginResourcePolicy: false }));
-app.use(cors({ origin: "*" })); // you can later restrict to https://www.jobryan.se
-app.use(express.json({ limit: "2mb" }));
+// --- Security (CSP allows self only; no inline scripts used) ---
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+  contentSecurityPolicy: {
+    useDefaults: true,
+    directives: {
+      "default-src": ["'self'"],
+      "script-src": ["'self'"],
+      "style-src": ["'self'", "https:", "'unsafe-inline'"], // allow inline styles if needed
+      "img-src": ["'self'", "data:"],
+      "connect-src": ["'self'"],
+      "object-src": ["'none'"],
+      "base-uri": ["'self'"],
+      "frame-ancestors": ["'self'"]
+    }
+  }
+}));
+app.use(cors());
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(rateLimit({ windowMs: 60 * 1000, max: 300 }));
+app.use(rateLimit({ windowMs: 60 * 1000, max: 200 }));
 
-// -------------------------------
-// Static files (frontend)
-// -------------------------------
-app.use(express.static("public"));
+// --- Static files ---
+const publicDir = path.join(__dirname, "public");
+// Serve /public at site root: / -> index.html, /app.js -> /public/app.js, etc.
+app.use(express.static(publicDir, { index: false }));
 
-// -------------------------------
-// Simple health check
-// -------------------------------
-app.get("/health", (req, res) => {
+// Root -> index.html (so / returns the HTML instead of a 404 page)
+app.get("/", (_req, res) => {
+  res.sendFile(path.join(publicDir, "index.html"));
+});
+
+// Health
+app.get("/health", (_req, res) => res.json({ ok: true }));
+
+// Prices (reads price.json in repo)
+app.get("/api/prices", (_req, res) => {
+  res.sendFile(path.join(__dirname, "price.json"));
+});
+
+// Submit (stub you can wire to email later)
+app.post("/api/send-offer", async (req, res) => {
+  // TODO: send email/Store — for now just ack
   res.json({ ok: true });
 });
 
-// -------------------------------
-// Price data endpoint
-// -------------------------------
-app.get("/api/prices", (req, res) => {
-  try {
-    const dataPath = path.join(__dirname, "price.json");
-    const data = JSON.parse(fs.readFileSync(dataPath, "utf8"));
-    res.json(data);
-  } catch (err) {
-    console.error("Error reading price.json:", err);
-    res.status(500).json({ error: "Could not read price data." });
-  }
+// 404 fallthrough for unknown API routes
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api/")) return res.status(404).json({ error: "Not found" });
+  return next();
 });
 
-// -------------------------------
-// File upload (optional)
-// -------------------------------
-const upload = multer({ dest: "uploads/" });
-
-// -------------------------------
-// Email sending endpoint
-// -------------------------------
-app.post("/api/send-offer", upload.none(), async (req, res) => {
-  try {
-    const { name, email, message } = req.body;
-
-    // --- set up transporter ---
-    const transporter = nodemailer.createTransport({
-      host: "smtp.one.com", // change to your email provider’s SMTP
-      port: 465,
-      secure: true,
-      auth: {
-        user: "info@jobryan.se", // your email
-        pass: process.env.EMAIL_PASS || "yourpassword", // add real password in Render environment vars
-      },
-    });
-
-    // --- email details ---
-    const mailOptions = {
-      from: `"Offertförfrågan" <info@jobryan.se>`,
-      to: "info@jobryan.se",
-      subject: `Ny offertförfrågan från ${name || "kund"}`,
-      text: `Från: ${name}\nE-post: ${email}\n\nMeddelande:\n${message}`,
-    };
-
-    await transporter.sendMail(mailOptions);
-    res.json({ success: true, message: "Offert skickad!" });
-  } catch (err) {
-    console.error("Email error:", err);
-    res.status(500).json({ success: false, message: "Kunde inte skicka e-post." });
-  }
-});
-
-// -------------------------------
-// 404 fallback (redirect to index.html for frontend routing)
-// -------------------------------
-app.use((req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
-
-// -------------------------------
-// Start server
-// -------------------------------
-app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server on :${PORT}`));
