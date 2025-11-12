@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jobryan Offertförfrågan</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background-color: #f9f9f9;
+    margin: 0;
+    padding: 0;
+  }
+  .container {
+    max-width: 600px;
+    margin: 3rem auto;
+    background: white;
+    border-radius: 10px;
+    padding: 2rem;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+  }
+  h1 {
+    color: #f25730;
+    text-align: center;
+  }
+  input, textarea, select {
+    width: 100%;
+    padding: 12px;
+    margin: 8px 0;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 1rem;
+  }
+  button {
+    background: #f25730;
+    border: none;
+    color: white;
+    padding: 12px 20px;
+    font-size: 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  button:hover {
+    background: #d94a29;
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1>Offertförfrågan</h1>
+    <form id="offertForm">
+      <label>Namn</label>
+      <input type="text" name="name" required>
+
+      <label>Email</label>
+      <input type="email" name="email" required>
+
+      <label>Beskrivning</label>
+      <textarea name="message" rows="5" placeholder="Beskriv vad du vill ha hjälp med"></textarea>
+
+      <button type="submit">Skicka</button>
+    </form>
+  </div>
+
+  <script>
+  const form = document.getElementById("offertForm");
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(form).entries());
+    try {
+      const res = await fetch("https://jobryan-offert-service.onrender.com/api/send-offer", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(data)
+      });
+      if (res.ok) {
+        alert("Tack! Din offertförfrågan har skickats.");
+        form.reset();
+      } else {
+        alert("Något gick fel. Försök igen senare.");
+      }
+    } catch (err) {
+      alert("Fel vid uppkoppling.");
+      console.error(err);
+    }
+  });
+  </script>
+</body>
+</html>
