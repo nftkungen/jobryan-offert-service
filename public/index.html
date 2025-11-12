@@ -1,89 +1,462 @@
 <!DOCTYPE html>
 <html lang="sv">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Jobryan Offertförfrågan</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Jobryan – Offertförfrågan</title>
 <style>
-  body {
-    font-family: Arial, sans-serif;
-    background-color: #f9f9f9;
-    margin: 0;
-    padding: 0;
+  :root{
+    --bg:#f7f8fb;--card:#fff;--ink:#101626;--muted:#64708a;--line:#e8ecf2;
+    --accent:#f25730;--accent-weak:#ffe7df;--accent-dark:#d44827;
   }
-  .container {
-    max-width: 600px;
-    margin: 3rem auto;
-    background: white;
-    border-radius: 10px;
-    padding: 2rem;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-  }
-  h1 {
-    color: #f25730;
-    text-align: center;
-  }
-  input, textarea, select {
-    width: 100%;
-    padding: 12px;
-    margin: 8px 0;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    font-size: 1rem;
-  }
-  button {
-    background: #f25730;
-    border: none;
-    color: white;
-    padding: 12px 20px;
-    font-size: 1rem;
-    border-radius: 8px;
-    cursor: pointer;
-  }
-  button:hover {
-    background: #d94a29;
-  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+  .wrap{max-width:900px;margin:28px auto;padding:0 16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:22px;box-shadow:0 10px 30px rgba(16,22,38,.06);overflow:hidden}
+  header{padding:28px;text-align:center}
+  header h1{margin:6px 0 4px;font-size:1.9rem;color:var(--accent)}
+  header .sub{color:var(--muted);font-size:.95rem}
+  .progress{display:flex;align-items:center;gap:12px;padding:12px 20px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:#fff9f7}
+  .bar{flex:1;height:10px;background:#f5dcd3;border-radius:999px;overflow:hidden}
+  .bar>span{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+  .label{font-weight:700;font-size:.9rem}
+  main{padding:20px}
+  .step{display:none}
+  .step.active{display:block}
+  .section{margin:16px 0;padding:18px;border:1px solid var(--line);border-radius:18px;background:#fff}
+  .section h2{margin:0 0 10px;font-size:1.15rem;color:var(--accent);text-align:center}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:720px){.grid{grid-template-columns:1fr}}
+  label.lbl{display:block;font-weight:600;margin:8px 0 6px}
+  .field{border:2px solid var(--line);border-radius:14px;display:flex;align-items:center;padding:12px 14px;background:#fff}
+  .field input,.field textarea,.field select{border:0;outline:0;background:transparent;width:100%;font-size:1rem}
+  .field textarea{min-height:110px;resize:vertical}
+  .field:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-weak)}
+  .chips{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .chip{display:flex;align-items:center;justify-content:center;border:2px solid var(--line);border-radius:14px;padding:14px;font-weight:600;cursor:pointer;user-select:none;background:#fff}
+  .chip input{display:none}
+  .chip:has(input:checked){border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-weak)}
+  .chip input:checked+span{color:var(--accent)}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .btn{border:2px solid var(--line);background:#fff;border-radius:999px;padding:12px 18px;font-weight:700;cursor:pointer}
+  .btn.primary{background:var(--accent);color:#fff;border-color:transparent}
+  .btn.primary:hover{background:var(--accent-dark)}
+  .actions{display:flex;justify-content:space-between;gap:12px;padding:14px 18px;border-top:1px solid var(--line);background:#fff}
+  .summary{background:#fff;border:1px dashed var(--line);border-radius:16px;padding:14px}
+  .money{font-weight:800}
+  .hint{color:var(--muted);font-size:.9rem}
+  .hidden{display:none !important}
+  .logo{display:flex;gap:10px;align-items:center;justify-content:center}
+  .logo img{width:64px;height:auto}
 </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Offertförfrågan</h1>
-    <form id="offertForm">
-      <label>Namn</label>
-      <input type="text" name="name" required>
+<div class="wrap">
+  <div class="card">
+    <header>
+      <div class="logo">
+        <img src="https://jobryan-offert-service.onrender.com/api/prices" onerror="this.remove()" class="hidden" alt=""/>
+        <h1>Offertförfrågan</h1>
+      </div>
+      <div class="sub">En fråga i taget – max 3 per sida för enkelhet. Orange Jobryan-stil.</div>
+    </header>
 
-      <label>Email</label>
-      <input type="email" name="email" required>
+    <div class="progress">
+      <div class="bar"><span id="pbar"></span></div>
+      <div class="label" id="plabel">Steg 1 av 9</div>
+    </div>
 
-      <label>Beskrivning</label>
-      <textarea name="message" rows="5" placeholder="Beskriv vad du vill ha hjälp med"></textarea>
+    <main id="steps">
+      <!-- 1. Projektets inriktning -->
+      <section class="step active">
+        <div class="section">
+          <h2>Vad vill du ha hjälp med?</h2>
+          <div class="chips" id="projectTypes">
+            <label class="chip"><input type="checkbox" name="typer" value="Badrum"><span>Badrum</span></label>
+            <label class="chip"><input type="checkbox" name="typer" value="Kök"><span>Kök</span></label>
+            <label class="chip"><input type="checkbox" name="typer" value="Totalrenovering"><span>Totalrenovering</span></label>
+            <label class="chip"><input type="checkbox" name="typer" value="Målning"><span>Målning</span></label>
+            <label class="chip"><input type="checkbox" name="typer" value="Golv"><span>Golv</span></label>
+            <label class="chip"><input type="checkbox" name="typer" value="Vägg/Tak"><span>Vägg/Tak</span></label>
+            <label class="chip"><input type="checkbox" name="typer" value="Annat"><span>Annat</span></label>
+          </div>
+        </div>
+        <div class="section">
+          <h2>Beskriv kort</h2>
+          <label class="lbl">Önskemål / material / länkar (valfritt)</label>
+          <div class="field"><textarea id="ovrigt" placeholder="Beskrivning"></textarea></div>
+        </div>
+      </section>
 
-      <button type="submit">Skicka</button>
-    </form>
+      <!-- 2. Adress & zon -->
+      <section class="step">
+        <div class="section">
+          <h2>Adress & zon</h2>
+          <label class="lbl">Adress</label>
+          <div class="field"><input id="adress" placeholder="Gatuadress, ort" /></div>
+          <div class="grid">
+            <div>
+              <label class="lbl">Postnummer</label>
+              <div class="field"><input id="postnr" placeholder="123 45" /></div>
+            </div>
+            <div>
+              <label class="lbl">Zon (påverkar restid)</label>
+              <div class="chips">
+                <label class="chip"><input type="radio" name="zon" value="1" checked><span>Zon 1</span></label>
+                <label class="chip"><input type="radio" name="zon" value="2"><span>Zon 2</span></label>
+                <label class="chip"><input type="radio" name="zon" value="3"><span>Zon 3</span></label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. Ytor -->
+      <section class="step">
+        <div class="section">
+          <h2>Ytor (m²)</h2>
+          <div class="grid">
+            <div>
+              <label class="lbl">Kvm golv</label>
+              <div class="field"><input id="kvm_golv" type="number" min="0" step="0.1" placeholder="ex 5" /></div>
+            </div>
+            <div>
+              <label class="lbl">Kvm vägg</label>
+              <div class="field"><input id="kvm_vagg" type="number" min="0" step="0.1" placeholder="ex 15" /></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. Snickerier / ytskikt -->
+      <section class="step">
+        <div class="section">
+          <h2>Ytskikt & grundmaterial</h2>
+          <label class="lbl">Ytskikt</label>
+          <div class="chips">
+            <label class="chip"><input type="radio" name="finish" value="Microcement"><span>Microcement</span></label>
+            <label class="chip"><input type="radio" name="finish" value="Kakel/klinker" checked><span>Kakel/klinker</span></label>
+            <label class="chip"><input type="radio" name="finish" value="Våtrumstapet"><span>Våtrumstapet</span></label>
+          </div>
+          <label class="lbl" style="margin-top:10px">Grundmaterial</label>
+          <div class="chips">
+            <label class="chip"><input type="radio" name="grundmat" value="Ja" checked><span>Ja</span></label>
+            <label class="chip"><input type="radio" name="grundmat" value="Nej"><span>Nej</span></label>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. VVS -->
+      <section class="step">
+        <div class="section">
+          <h2>VVS</h2>
+          <label class="lbl">Dolda rör (arbete)</label>
+          <div class="chips">
+            <label class="chip"><input type="radio" name="dolda_ror" value="Ja"><span>Ja</span></label>
+            <label class="chip"><input type="radio" name="dolda_ror" value="Nej" checked><span>Nej</span></label>
+          </div>
+          <label class="lbl" style="margin-top:10px">WC</label>
+          <div class="chips">
+            <label class="chip"><input type="radio" name="wc_typ" value="Väggmonterad" checked><span>Väggmonterad</span></label>
+            <label class="chip"><input type="radio" name="wc_typ" value="Golvstående"><span>Golvstående</span></label>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. El -->
+      <section class="step">
+        <div class="section">
+          <h2>El & belysning</h2>
+          <div class="grid">
+            <div>
+              <label class="lbl">Spotlights (antal)</label>
+              <div class="field"><input id="spots" type="number" min="0" step="1" value="0" /></div>
+            </div>
+            <div>
+              <label class="lbl">Golvvärme</label>
+              <div class="chips">
+                <label class="chip"><input type="radio" name="golvv" value="Ja El"><span>Ja</span></label>
+                <label class="chip"><input type="radio" name="golvv" value="Nej" checked><span>Nej</span></label>
+              </div>
+            </div>
+          </div>
+          <div class="grid">
+            <div>
+              <label class="lbl">Handdukstork</label>
+              <div class="chips">
+                <label class="chip"><input type="radio" name="handdukt" value="Ja"><span>Ja</span></label>
+                <label class="chip"><input type="radio" name="handdukt" value="Nej" checked><span>Nej</span></label>
+              </div>
+            </div>
+            <div>
+              <label class="lbl">Nisch</label>
+              <div class="chips">
+                <label class="chip"><input type="radio" name="nisch" value="Med belysning"><span>Med belysning</span></label>
+                <label class="chip"><input type="radio" name="nisch" value="Utan belysning" checked><span>Utan belysning</span></label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7. ROT/RUT -->
+      <section class="step">
+        <div class="section">
+          <h2>Skattereduktion</h2>
+          <label class="lbl">Välj om ROT/RUT ska tillämpas</label>
+          <div class="chips">
+            <label class="chip"><input type="radio" name="tax_deduction" value="Ingen" checked><span>Ingen</span></label>
+            <label class="chip"><input type="radio" name="tax_deduction" value="ROT"><span>ROT</span></label>
+            <label class="chip"><input type="radio" name="tax_deduction" value="RUT"><span>RUT</span></label>
+          </div>
+          <div class="grid" style="margin-top:10px">
+            <div>
+              <label class="lbl">Antal personer som nyttjar avdraget</label>
+              <div class="field"><input id="ded_persons" type="number" min="1" max="4" value="1" /></div>
+            </div>
+          </div>
+          <div class="hint">ROT-rate 30%, RUT-rate 50%. Tak per person: ROT 50 000 kr, RUT 75 000 kr (inställbart i prisfilen).</div>
+        </div>
+      </section>
+
+      <!-- 8. Kontakt & uppladdning -->
+      <section class="step">
+        <div class="section">
+          <h2>Kontakt & uppladdning</h2>
+          <div class="grid">
+            <div>
+              <label class="lbl">Namn</label>
+              <div class="field"><input id="namn" placeholder="För- och efternamn"/></div>
+            </div>
+            <div>
+              <label class="lbl">E-post</label>
+              <div class="field"><input id="epost" type="email" placeholder="namn@exempel.se"/></div>
+            </div>
+          </div>
+          <label class="lbl" style="margin-top:10px">Telefon (valfritt)</label>
+          <div class="field"><input id="telefon" placeholder="+46 …"/></div>
+
+          <label class="lbl" style="margin-top:10px">Bilder/filer (valfritt, PDF/jpg/png)</label>
+          <div class="field"><input id="filer" type="file" multiple accept=".pdf,image/*"/></div>
+        </div>
+      </section>
+
+      <!-- 9. Summering -->
+      <section class="step">
+        <div class="section">
+          <h2>Summering & preliminär prisbild</h2>
+          <div class="summary" id="summaryBox">
+            <div>Arbete: <span class="money" id="sArbete">–</span></div>
+            <div>Material: <span class="money" id="sMat">–</span></div>
+            <div>Moms: <span class="money" id="sMoms">–</span></div>
+            <div><b>Totalt inkl. moms:</b> <span class="money" id="sTot">–</span></div>
+            <div id="sDedRow" class="hidden">Preliminär skattereduktion: <span class="money" id="sDed">–</span><br><b>Att betala efter avdrag:</b> <span class="money" id="sAfter">–</span></div>
+            <div class="hint" style="margin-top:6px">Detta är en indikation baserad på dina val. Vi återkommer med exakt offert.</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="actions">
+      <button class="btn" id="back">Tillbaka</button>
+      <div class="row">
+        <button class="btn" id="save" type="button" onclick="navigator.clipboard.writeText(JSON.stringify(state))">Spara</button>
+        <button class="btn primary" id="next">Nästa</button>
+      </div>
+    </div>
   </div>
+</div>
 
-  <script>
-  const form = document.getElementById("offertForm");
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const data = Object.fromEntries(new FormData(form).entries());
-    try {
-      const res = await fetch("https://jobryan-offert-service.onrender.com/api/send-offer", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(data)
-      });
-      if (res.ok) {
-        alert("Tack! Din offertförfrågan har skickats.");
-        form.reset();
-      } else {
-        alert("Något gick fel. Försök igen senare.");
-      }
-    } catch (err) {
-      alert("Fel vid uppkoppling.");
-      console.error(err);
+<script>
+const SEND_ENDPOINT = "https://jobryan-offert-service.onrender.com/api/send-offer";
+const PRICE_URL     = "https://jobryan-offert-service.onrender.com/api/prices";
+
+let PRICE = null;
+const steps = Array.from(document.querySelectorAll('.step'));
+const pbar = document.getElementById('pbar');
+const plabel = document.getElementById('plabel');
+const backBtn = document.getElementById('back');
+const nextBtn = document.getElementById('next');
+
+const state = {
+  typer: [],
+  ovrigt: "",
+  adress: "", postnr: "", zon: "1",
+  kvm_golv: 0, kvm_vagg: 0,
+  finish: "Kakel/klinker", grundmat: "Ja",
+  dolda_ror: "Nej", wc_typ: "Väggmonterad",
+  spots: 0, golvv: "Nej", handdukt: "Nej", nisch: "Utan belysning",
+  tax_deduction: "Ingen", ded_persons: 1,
+  namn: "", epost: "", telefon: ""
+};
+
+let i = 0;
+
+function money(n){ return new Intl.NumberFormat('sv-SE',{style:'currency',currency:'SEK',maximumFractionDigits:0}).format(n||0); }
+function num(v){ const f = parseFloat(v); return isNaN(f)?0:f; }
+function getChecked(name){ const r = document.querySelector(`input[name="${name}"]:checked`); return r? r.value : ""; }
+function getChecks(name){ return Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map(x=>x.value); }
+
+function syncFromUI(){
+  state.typer = getChecks('typer');
+  state.ovrigt = document.getElementById('ovrigt').value.trim();
+
+  state.adress = document.getElementById('adress').value.trim();
+  state.postnr = document.getElementById('postnr').value.trim();
+  state.zon = getChecked('zon') || "1";
+
+  state.kvm_golv = num(document.getElementById('kvm_golv').value);
+  state.kvm_vagg = num(document.getElementById('kvm_vagg').value);
+
+  state.finish   = getChecked('finish') || "Kakel/klinker";
+  state.grundmat = getChecked('grundmat') || "Ja";
+
+  state.dolda_ror = getChecked('dolda_ror') || "Nej";
+  state.wc_typ    = getChecked('wc_typ')    || "Väggmonterad";
+
+  state.spots    = num(document.getElementById('spots').value);
+  state.golvv    = getChecked('golvv')    || "Nej";
+  state.handdukt = getChecked('handdukt') || "Nej";
+  state.nisch    = getChecked('nisch')    || "Utan belysning";
+
+  state.tax_deduction = getChecked('tax_deduction') || "Ingen";
+  state.ded_persons   = Math.max(1, Math.min(4, num(document.getElementById('ded_persons').value || 1)));
+
+  state.namn = (document.getElementById('namn').value || "").trim();
+  state.epost= (document.getElementById('epost').value || "").trim();
+  state.telefon = (document.getElementById('telefon').value || "").trim();
+}
+
+function calc(){
+  const moms = PRICE.moms ?? 0.25;
+  const rotRate = PRICE.rot_rate ?? 0.30;
+  const rutRate = PRICE.rut_rate ?? 0.50;
+
+  const zonCost = (PRICE.zon?.[state.zon] || 0);
+  const kvmG = state.kvm_golv, kvmV = state.kvm_vagg;
+  const area = (kvmG||0)+(kvmV||0);
+
+  let arbete = 0, material = 0;
+
+  // zonpåslag
+  arbete += zonCost;
+
+  // ytor
+  arbete += kvmG * (PRICE.kvadrat?.golv || 0);
+  arbete += kvmV * (PRICE.kvadrat?.vagg || 0);
+
+  // ytskikt
+  const fin = PRICE.finish?.[state.finish] || { base:0, per_m2:0 };
+  arbete += (fin.base||0) + area*(fin.per_m2||0);
+
+  // materialpaket
+  material += (PRICE.grundmaterial?.[state.grundmat] || 0);
+
+  // VVS
+  arbete += (PRICE.vvs?.dolda_ror?.[state.dolda_ror] || 0);
+  arbete += (PRICE.vvs?.wc_typ?.[state.wc_typ] || 0);
+
+  // El
+  arbete += state.spots * (PRICE.el?.spot || 0);
+  if (state.golvv === "Ja El")   arbete += (PRICE.el?.golvv?.["Ja El"] || 0);
+  if (state.handdukt === "Ja")   arbete += (PRICE.el?.handdukt?.Ja || 0);
+  if (state.nisch === "Med belysning") arbete += (PRICE.el?.nisch?.["Med belysning"] || 0);
+
+  // min debitering?
+  const minDeb = PRICE.min_debitering || 0;
+  if (minDeb && (arbete + material) < minDeb){
+    const diff = minDeb - (arbete + material);
+    arbete += diff;
+  }
+
+  const exmoms = arbete + material;
+  const momsBelopp = exmoms * moms;
+  const inklmoms = exmoms + momsBelopp;
+
+  // ROT/RUT
+  let prelimDed=0, after=inklmoms;
+  const rate = state.tax_deduction === "ROT" ? rotRate : state.tax_deduction === "RUT" ? rutRate : 0;
+  if (rate>0){
+    const arbeidInkl = arbete*(1+moms);
+    const capPerPerson = state.tax_deduction === "ROT" ? 50000 : 75000;
+    prelimDed = Math.min(state.ded_persons*capPerPerson, Math.round(arbeitInkl*rate));
+    after = Math.max(0, inklmoms - prelimDed);
+  }
+
+  return {arbete,material,exmoms,momsBelopp,inklmoms,prelimDed,after};
+}
+
+function render(){
+  steps.forEach((s,idx)=>s.classList.toggle('active', idx===i));
+  const pct = ((i+1)/steps.length)*100;
+  pbar.style.width = pct+'%';
+  plabel.textContent = `Steg ${i+1} av ${steps.length}`;
+
+  // update summary
+  syncFromUI();
+  const r = calc();
+  const sDedRow = document.getElementById('sDedRow');
+  document.getElementById('sArbete').textContent = money(r.arbete);
+  document.getElementById('sMat').textContent    = money(r.material);
+  document.getElementById('sMoms').textContent   = money(r.momsBelopp);
+  document.getElementById('sTot').textContent    = money(r.inklmoms);
+  if (r.prelimDed>0){
+    sDedRow.classList.remove('hidden');
+    document.getElementById('sDed').textContent  = money(r.prelimDed);
+    document.getElementById('sAfter').textContent= money(r.after);
+  } else {
+    sDedRow.classList.add('hidden');
+  }
+
+  backBtn.disabled = (i===0);
+  nextBtn.textContent = (i===steps.length-1)?'Skicka':'Nästa';
+}
+
+backBtn.addEventListener('click', ()=>{ if(i>0){ i--; render(); } });
+nextBtn.addEventListener('click', async ()=>{
+  if (i<steps.length-1){ i++; render(); return; }
+  // submit
+  syncFromUI();
+  try {
+    const fd = new FormData();
+    // meta
+    fd.append('_meta_title','Offertförfrågan');
+    // fields
+    for (const [k,v] of Object.entries(state)){
+      fd.append(k, Array.isArray(v)? v.join(', ') : String(v));
     }
-  });
-  </script>
+    // files
+    const files = document.getElementById('filer').files;
+    for (const f of files) fd.append('files', f);
+
+    nextBtn.disabled = true; nextBtn.textContent = 'Skickar…';
+    const res = await fetch(SEND_ENDPOINT, { method:'POST', body: fd });
+    if(!res.ok) throw new Error('Serverfel: '+res.status);
+    alert('Tack! Vi har mottagit din förfrågan.');
+    location.reload();
+  } catch(e){
+    console.error(e);
+    alert('Kunde inte skicka. Försök igen senare.');
+  } finally {
+    nextBtn.disabled = false; nextBtn.textContent = 'Skicka';
+  }
+});
+
+async function loadPrices(){
+  const r = await fetch(PRICE_URL, {cache:'no-store'});
+  if(!r.ok) throw new Error('Kunde inte ladda prislistan');
+  PRICE = await r.json();
+}
+
+(async () => {
+  try {
+    await loadPrices();
+    render();
+  } catch (e){
+    console.error(e);
+    alert('Kunde inte ladda prislistan. Testa igen.');
+  }
+})();
+</script>
 </body>
 </html>
