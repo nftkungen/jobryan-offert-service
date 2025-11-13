@@ -1,124 +1,70 @@
-{
-  "moms": 0.25,
-  "rot_rate": 0.3,
-  "rut_rate": 0.5,
-  "min_debitering": 0,
-  "zon": {},
-  "kvadrat": {},
-  "finish": {},
-  "grundmaterial": {},
-  "vvs": {},
-  "el": {},
-  "categories": {
-    "Reskostnader": [
-      {
-        "Resekostander": "",
-        "Unnamed: 1": "",
-        "Unnamed: 2": "",
-        "Unnamed: 3": ""
-      },
-      {
-        "Resekostander": "Startadress",
-        "Unnamed: 1": "Slätbaksvägen 17, 12051",
-        "Unnamed: 2": "",
-        "Unnamed: 3": ""
-      },
-      {
-        "Resekostander": "",
-        "Unnamed: 1": "",
-        "Unnamed: 2": "",
-        "Unnamed: 3": ""
-      },
-      {
-        "Resekostander": "Slut adress",
-        "Unnamed: 1": "",
-        "Unnamed: 2": "",
-        "Unnamed: 3": "km"
-      },
-      {
-        "Resekostander": "",
-        "Unnamed: 1": "",
-        "Unnamed: 2": "",
-        "Unnamed: 3": ""
-      },
-      {
-        "Resekostander": "dagar",
-        "Unnamed: 1": 25,
-        "Unnamed: 2": "",
-        "Unnamed: 3": ""
-      },
-      {
-        "Resekostander": "",
-        "Unnamed: 1": "Zon 1",
-        "Unnamed: 2": "Zon 2",
-        "Unnamed: 3": "Zon 3"
-      },
-      {
-        "Resekostander": "",
-        "Unnamed: 1": "",
-        "Unnamed: 2": "",
-        "Unnamed: 3": ""
-      },
-      {
-        "Resekostander": "Kostnad / km ",
-        "Unnamed: 1": "",
-        "Unnamed: 2": 5,
-        "Unnamed: 3": 5
-      },
-      {
-        "Resekostander": "Taxa",
-        "Unnamed: 1": 160,
-        "Unnamed: 2": 72,
-        "Unnamed: 3": 0
-      },
-      {
-        "Resekostander": "Trängsel",
-        "Unnamed: 1": 90,
-        "Unnamed: 2": 0,
-        "Unnamed: 3": 0
-      },
-      {
-        "Resekostander": "",
-        "Unnamed: 1": "",
-        "Unnamed: 2": "",
-        "Unnamed: 3": ""
-      },
-      {
-        "Resekostander": "",
-        "Unnamed: 1": "",
-        "Unnamed: 2": "",
-        "Unnamed: 3": ""
-      },
-      {
-        "Resekostander": "Km",
-        "Unnamed: 1": 0,
-        "Unnamed: 2": 0,
-        "Unnamed: 3": 0
-      },
-      {
-        "Resekostander": "Parkering",
-        "Unnamed: 1": 4000,
-        "Unnamed: 2": 1800,
-        "Unnamed: 3": 0
-      },
-      {
-        "Resekostander": "Trängsel",
-        "Unnamed: 1": 2250,
-        "Unnamed: 2": "",
-        "Unnamed: 3": ""
-      },
-      {
-        "Resekostander": "",
-        "Unnamed: 1": "",
-        "Unnamed: 2": "",
-        "Unnamed: 3": ""
-      },
-      {
-        "Resekostander": "Summa",
-        "Unnamed: 1": "n ",
-        "Unnamed: 2": 1800,
-        "Unnamed: 3": 0
-      }
-    ]
+// ======= Jobryan Offert Service =======
+
+import express from "express";
+import path from "path";
+import fs from "fs";
+import fetch from "node-fetch";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const app = express();
+const __dirname = path.resolve();
+
+// ---------- BASIC MIDDLEWARE ----------
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Serve frontend files from /public
+app.use(express.static(path.join(__dirname, "public")));
+
+// ---------- API: TEST ----------
+app.get("/api/ping", (req, res) => {
+  res.json({ ok: true, msg: "pong" });
+});
+
+// ---------- API: PRICELIST (from price.json) ----------
+app.get("/api/prices", (req, res) => {
+  try {
+    const raw = fs.readFileSync(path.join(__dirname, "price.json"), "utf8");
+    const prices = JSON.parse(raw);
+    res.json(prices);
+  } catch (err) {
+    console.error("[/api/prices] error:", err);
+    res.status(500).json({ ok: false, error: "prices_not_found" });
   }
-}
+});
+
+// ---------- API: CONNECT TO GOOGLE SHEETS ----------
+app.post("/api/estimate/badrum", async (req, res) => {
+  try {
+    if (!process.env.SHEETS_WEBAPP_URL) {
+      return res
+        .status(500)
+        .json({ ok: false, error: "Missing SHEETS_WEBAPP_URL env var" });
+    }
+
+    const r = await fetch(process.env.SHEETS_WEBAPP_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(req.body),
+    });
+
+    const data = await r.json();
+    return res.json(data);
+  } catch (err) {
+    console.error("Estimate error:", err);
+    res.status(500).json({ ok: false, error: "proxy_failed" });
+  }
+});
+
+// ---------- FALLBACK (SPA) ----------
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+// ---------- START SERVER ----------
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`✅ Jobryan server running on port ${PORT}`);
+});
