@@ -5,8 +5,7 @@ const API_URL = "/api/estimate/badrum";
 
 // All state for the wizard
 const initialState = {
-  step: 1,                 // 1–4
-  subStep3: "snickeri",    // "snickeri" | "vvsEl"
+  step: 1,                 // 1-5
 
   // --- Kontakt + fastighet (steg 1) ---
   kund_namn: "",
@@ -25,7 +24,7 @@ const initialState = {
   kvm_vagg: "",
   takhojd: 2.4,
 
-  // --- Snickeri / ytskikt (steg 3A) ---
+  // --- Snickeri / ytskikt (steg 3) ---
   microcement_golv: "Nej",
   microcement_vagg: "Nej",
   ny_troskel: "Nej",
@@ -40,7 +39,7 @@ const initialState = {
   gerade_horn_meter: "0",
   fyll_i_antal_meter: "0",
 
-  // --- VVS (steg 3B) ---
+  // --- VVS (steg 4) ---
   dolda_ror: "Nej",
   wc: "Ingen WC",
   byte_av_avloppsgroda: "Nej",
@@ -55,13 +54,13 @@ const initialState = {
   inklakat_badkar: "Nej",
   varme_vp: "Nej",
 
-  // --- El (steg 3B) ---
+  // --- El (steg 4) ---
   takbelysning: "Plafond",
   spotlight_antal: "0",
   golvvärme: "Nej",
   handdukstork: "Nej",
 
-  // --- API-resultat ---
+  // --- API-resultat (steg 5) ---
   loading: false,
   error: "",
   priceResult: null
@@ -132,7 +131,7 @@ function renderHeader() {
       <div>
         <h1 class="title">Offertkalkyl – Badrum</h1>
         <p class="subtitle">Svara på några frågor så räknar vi fram ett preliminärt pris.</p>
-        <div class="step-indicator">Steg ${state.step} av 4</div>
+        <div class="step-indicator">Steg ${state.step} av 5</div>
       </div>
     </div>
   `;
@@ -147,9 +146,11 @@ function renderStep() {
     case 2:
       return renderStep2();
     case 3:
-      return renderStep3();
+      return renderStep3_Snickeri();
     case 4:
-      return renderStep4();
+      return renderStep4_VvsEl();
+    case 5:
+      return renderStep5_Pris();
     default:
       return "";
   }
@@ -281,35 +282,18 @@ function renderStep2() {
   `;
 }
 
-// --- Step 3 – Utförande: Snickeri / VVS & El (sub-tabs) ---
-function renderStep3() {
+// --- Step 3 – Snickeri ---
+function renderStep3_Snickeri() {
   return `
     <section class="card">
-      <h2>3. Utförande – ytskikt & installationer</h2>
-      <p class="muted">Vi börjar med det som påverkar priset mest.</p>
+      <h2>3. Utförande – Ytskikt & snickeri</h2>
+      <p class="muted">Välj ytskikt, dörrar och andra snickeridetaljer.</p>
 
-      <div class="subtabs">
-        <button type="button"
-          class="subtab ${state.subStep3 === "snickeri" ? "subtab--active" : ""}"
-          data-substep="snickeri">Ytskikt & snickeri</button>
-        <button type="button"
-          class="subtab ${state.subStep3 === "vvsEl" ? "subtab--active" : ""}"
-          data-substep="vvsEl">VVS & El</button>
-      </div>
-
-      ${
-        state.subStep3 === "snickeri"
-          ? renderSnickeriSection()
-          : renderVvsElSection()
-      }
-
+      ${renderSnickeriSection()} 
+      
       <div class="actions">
         <button class="btn btn-ghost" data-prev>Tillbaka</button>
-        ${
-          state.subStep3 === "snickeri"
-            ? `<button class="btn btn-primary" data-goto-vvs>Vidare till VVS & El</button>`
-            : `<button class="btn btn-primary" data-next>Nästa steg</button>`
-        }
+        <button class="btn btn-primary" data-next>Nästa steg</button>
       </div>
     </section>
   `;
@@ -365,6 +349,23 @@ function renderSnickeriSection() {
   `;
 }
 
+// --- Step 4 – VVS & El ---
+function renderStep4_VvsEl() {
+  return `
+    <section class="card">
+      <h2>4. Utförande – VVS & El</h2>
+      <p class="muted">Välj installationer för VVS och el.</p>
+      
+      ${renderVvsElSection()} 
+
+      <div class="actions">
+        <button class="btn btn-ghost" data-prev>Tillbaka</button>
+        <button class="btn btn-primary" data-next>Nästa steg</button>
+      </div>
+    </section>
+  `;
+}
+
 function renderVvsElSection() {
   return `
     <h3 class="section-title">VVS</h3>
@@ -415,13 +416,13 @@ function renderVvsElSection() {
   `;
 }
 
-// --- Step 4 – Beräkna pris ---
-function renderStep4() {
+// --- Step 5 – Beräkna pris ---
+function renderStep5_Pris() {
   const { loading, error, priceResult } = state;
 
   return `
     <section class="card">
-      <h2>4. Beräkna pris</h2>
+      <h2>5. Beräkna pris</h2>
       <p>Nu kan du beräkna ett preliminärt pris baserat på dina val.</p>
 
       ${
@@ -606,19 +607,9 @@ function wireEvents() {
     });
   });
 
-  // Subtabs on step 3
-  root.querySelectorAll("[data-substep]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      setState({ subStep3: btn.dataset.substep });
-    });
-  });
-
-  const gotoVvs = root.querySelector("[data-goto-vvs]");
-  if (gotoVvs) {
-    gotoVvs.addEventListener("click", () => {
-      setState({ subStep3: "vvsEl" });
-    });
-  }
+  // REMOVED Subtabs on step 3
+  
+  // REMOVED const gotoVvs
 
   const nextBtn = root.querySelector("[data-next]");
   if (nextBtn) nextBtn.addEventListener("click", handleNext);
@@ -631,7 +622,7 @@ function wireEvents() {
 }
 
 function handleNext() {
-  if (state.step < 4) {
+  if (state.step < 5) {
     setState({ step: state.step + 1 });
   }
 }
