@@ -2,30 +2,831 @@
 <html lang="sv">
 <head>
   <meta charset="UTF-8" />
-  <title>Jobryan Badrumsberäkning</title>
-  <link rel="stylesheet" href="styles.css" />
+  <title>Jobryan Offert – Badrum</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --orange: #ff6b11;
+      --orange-soft: #ffe2cc;
+      --blue: #19a2ff;
+      --bg: #f5f5f7;
+      --border: #e2e2e6;
+      --text-main: #111827;
+      --text-muted: #6b7280;
+      --card-radius: 18px;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text-main);
+    }
+
+    .layout {
+      max-width: 1120px;
+      margin: 24px auto 40px;
+      padding: 0 16px;
+      display: flex;
+      gap: 18px;
+      align-items: flex-start;
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        flex-direction: column;
+      }
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: var(--card-radius);
+      box-shadow: 0 18px 35px rgba(15, 23, 42, 0.08);
+      padding: 20px 22px 22px;
+    }
+
+    .wizard-card {
+      flex: 2;
+      min-width: 0;
+    }
+
+    .summary-card {
+      flex: 1;
+      min-width: 260px;
+      position: sticky;
+      top: 16px;
+      align-self: flex-start;
+    }
+
+    .wizard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .wizard-title {
+      font-size: 22px;
+      font-weight: 650;
+      letter-spacing: 0.03em;
+    }
+
+    .wizard-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .step-indicator {
+      margin: 10px 0 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .step-bar {
+      flex: 1;
+      height: 4px;
+      border-radius: 999px;
+      background: #e5e7eb;
+      margin-left: 10px;
+      overflow: hidden;
+    }
+
+    .step-bar-fill {
+      height: 100%;
+      width: 0;
+      background: var(--orange);
+      transition: width 0.25s ease;
+    }
+
+    .step {
+      display: none;
+      margin-top: 6px;
+    }
+
+    .step.active {
+      display: block;
+    }
+
+    .step-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 4px 0 12px;
+    }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px 14px;
+    }
+
+    .field-full {
+      grid-column: 1 / -1;
+    }
+
+    @media (max-width: 720px) {
+      .field-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 13px;
+    }
+
+    label {
+      font-weight: 500;
+    }
+
+    .field small {
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    input[type="tel"],
+    input[type="email"],
+    select {
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      font-size: 13px;
+      outline: none;
+      background: #f9fafb;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease,
+        background 0.15s ease;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--orange);
+      background: #ffffff;
+      box-shadow: 0 0 0 1px rgba(255, 107, 17, 0.15);
+    }
+
+    textarea {
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      font-size: 13px;
+      resize: vertical;
+      min-height: 70px;
+      background: #f9fafb;
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .slider-row input[type="range"] {
+      flex: 1;
+    }
+
+    .slider-value {
+      min-width: 70px;
+      text-align: center;
+      border-radius: 10px;
+      background: #ecfdf3;
+      border: 1px solid #bbf7d0;
+      padding: 4px 8px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .wizard-nav {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .btn {
+      border-radius: 999px;
+      padding: 9px 16px;
+      font-size: 13px;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.05s ease,
+        box-shadow 0.15s ease, color 0.15s ease;
+    }
+
+    .btn-primary {
+      background: var(--orange);
+      color: #ffffff;
+      box-shadow: 0 10px 18px rgba(255, 107, 17, 0.28);
+    }
+
+    .btn-primary:hover {
+      background: #ff7700;
+      transform: translateY(-1px);
+    }
+
+    .btn-outline {
+      background: #ffffff;
+      color: var(--text-main);
+      border: 1px solid var(--border);
+    }
+
+    .btn-outline:hover {
+      background: #f3f4f6;
+    }
+
+    .btn[disabled] {
+      opacity: 0.6;
+      cursor: default;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .muted {
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    /* summary */
+
+    .summary-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 6px;
+    }
+
+    .summary-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .summary-price-main {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--orange);
+    }
+
+    .summary-chip {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      background: var(--orange-soft);
+      color: #7a3410;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 500;
+      margin-top: 2px;
+    }
+
+    .summary-section {
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px dashed #e5e7eb;
+    }
+
+    .summary-section h4 {
+      margin: 0 0 4px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .summary-list {
+      list-style: none;
+      margin: 0;
+      padding-left: 0;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .summary-list li + li {
+      margin-top: 3px;
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 4px;
+    }
+
+    .pill {
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      padding: 2px 7px;
+      font-size: 11px;
+      color: var(--text-muted);
+      background: #f9fafb;
+    }
+
+    .badge-good {
+      color: #166534;
+      background: #dcfce7;
+      border-color: #bbf7d0;
+    }
+
+    .error-text {
+      color: #b91c1c;
+      font-size: 12px;
+      margin-top: 6px;
+    }
+
+    .success-text {
+      color: #166534;
+      font-size: 12px;
+      margin-top: 6px;
+    }
+  </style>
 </head>
 <body>
+  <div class="layout">
+    <!-- LEFT: wizard -->
+    <div class="card wizard-card">
+      <header class="wizard-header">
+        <div>
+          <div class="wizard-title">Offertkalkyl – Badrum</div>
+          <div class="wizard-subtitle">
+            Svara på några frågor så räknar vi fram ett preliminärt pris.
+          </div>
+        </div>
+        <div class="muted" id="step-counter">Steg 1 av 4</div>
+      </header>
 
-<div id="wizard-container">
+      <div class="step-indicator">
+        <span class="muted">Badrumsformulär</span>
+        <div class="step-bar">
+          <div class="step-bar-fill" id="step-bar-fill"></div>
+        </div>
+      </div>
 
-  <!-- STEP HEADER -->
-  <div id="wizard-header">
-    <h2 id="step-title">Fastighetsinformation</h2>
-    <div id="step-progress">Steg 1 av 5</div>
+      <form id="bathroom-form">
+        <!-- STEP 1 – Fastighetsinfo -->
+        <section class="step active" data-step="1">
+          <h3 class="step-title">1. Fastighetsinformation</h3>
+          <div class="field-grid">
+            <div class="field field-full">
+              <label for="address">Adress</label>
+              <input
+                type="text"
+                id="address"
+                name="address"
+                placeholder="Slätbaksvägen 17"
+              />
+            </div>
+
+            <div class="field">
+              <label for="property_type">Fastighetstyp</label>
+              <select id="property_type" name="property_type">
+                <option value="Lägenhet">Lägenhet</option>
+                <option value="Villa">Villa</option>
+                <option value="Radhus">Radhus</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="era">Byggår / era</label>
+              <select id="era" name="era">
+                <option value="20-tal">20-tal</option>
+                <option value="30-tal">30-tal</option>
+                <option value="40-tal">40-tal</option>
+                <option value="50-tal">50-tal</option>
+                <option value="60-tal" selected>60-tal</option>
+                <option value="70-tal">70-tal</option>
+                <option value="80-tal">80-tal</option>
+                <option value="90-tal">90-tal</option>
+                <option value="2000+">2000+</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="floor">Våningsplan</label>
+              <select id="floor" name="floor">
+                <option value="-1">Källare</option>
+                <option value="BV">BV</option>
+                <option value="1">1 tr</option>
+                <option value="2">2 tr</option>
+                <option value="3" selected>3 tr</option>
+                <option value="4">4 tr</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="elevator">Hiss</label>
+              <select id="elevator" name="elevator">
+                <option value="Stor">Stor</option>
+                <option value="Liten">Liten</option>
+                <option value="Ingen">Ingen</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <!-- STEP 2 – Grunddata badrum -->
+        <section class="step" data-step="2">
+          <h3 class="step-title">2. Storlek och grunddata</h3>
+          <div class="field-grid">
+            <div class="field">
+              <label for="postnummer">Postnummer</label>
+              <input
+                type="text"
+                id="postnummer"
+                name="postnummer"
+                placeholder="t.ex. 12051"
+              />
+            </div>
+
+            <div class="field">
+              <label for="zon">Zon (1–4)</label>
+              <select id="zon" name="zon">
+                <option value="1">Zon 1 (nära)</option>
+                <option value="2">Zon 2</option>
+                <option value="3" selected>Zon 3</option>
+                <option value="4">Zon 4 (långt bort)</option>
+              </select>
+              <small>För att beräkna reskostnad</small>
+            </div>
+
+            <div class="field field-full">
+              <label>Storlek (golvyta)</label>
+              <div class="slider-row">
+                <input
+                  type="range"
+                  id="kvm_golv_slider"
+                  min="2"
+                  max="20"
+                  step="0.5"
+                  value="6"
+                />
+                <div class="slider-value">
+                  <span id="kvm_golv_text">6</span> m²
+                </div>
+              </div>
+              <input
+                type="hidden"
+                id="kvm_golv"
+                name="kvm_golv"
+                value="6"
+              />
+            </div>
+
+            <div class="field">
+              <label for="kvm_vagg">Väggyta (m²)</label>
+              <input
+                type="number"
+                id="kvm_vagg"
+                name="kvm_vagg"
+                min="0"
+                step="0.1"
+                placeholder="t.ex. 30"
+              />
+            </div>
+
+            <div class="field">
+              <label for="takhojd">Takhöjd (m)</label>
+              <input
+                type="number"
+                id="takhojd"
+                name="takhojd"
+                min="2"
+                step="0.1"
+                placeholder="2.4"
+              />
+            </div>
+          </div>
+        </section>
+
+        <!-- STEP 3 – Snickeri + VVS + El (korta versionen) -->
+        <section class="step" data-step="3">
+          <h3 class="step-title">3. Utförande – ytskikt & installationer</h3>
+          <p class="muted" style="margin-bottom: 10px">
+            Vi börjar med några val som påverkar priset mest. (Resten kan du ta
+            med säljaren vid hembesöket.)
+          </p>
+
+          <h4 style="font-size: 13px; margin: 6px 0 6px">Ytskikt & snickeri</h4>
+          <div class="field-grid">
+            <div class="field">
+              <label for="microcement_golv">Microcement golv</label>
+              <select id="microcement_golv" name="microcement_golv">
+                <option value="Nej" selected>Nej</option>
+                <option value="Ja">Ja</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="microcement_vagg">Microcement vägg</label>
+              <select id="microcement_vagg" name="microcement_vagg">
+                <option value="Nej" selected>Nej</option>
+                <option value="Ja">Ja</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="ny_troskel">Ny tröskel</label>
+              <select id="ny_troskel" name="ny_troskel">
+                <option value="Nej">Nej</option>
+                <option value="Ja">Ja</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="byta_dorrblad">Byta dörrblad</label>
+              <select id="byta_dorrblad" name="byta_dorrblad">
+                <option value="Nej">Nej</option>
+                <option value="Ja">Ja</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="byta_karm_dorr">Byta karm + dörr</label>
+              <select id="byta_karm_dorr" name="byta_karm_dorr">
+                <option value="Nej">Nej</option>
+                <option value="Ja">Ja</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="slipning_dorr">Slipning av dörr</label>
+              <select id="slipning_dorr" name="slipning_dorr">
+                <option value="Nej">Nej</option>
+                <option value="Ja">Ja</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="bankskiva_ovan_tm_tt">Bänkskiva ovan TM/TT</label>
+              <select id="bankskiva_ovan_tm_tt" name="bankskiva_ovan_tm_tt">
+                <option value="Nej">Nej</option>
+                <option value="Ja">Ja</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="vaggskap">Väggskåp</label>
+              <select id="vaggskap" name="vaggskap">
+                <option value="Nej">Nej</option>
+                <option value="Ja">Ja</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="nytt_innertak">Nytt innertak</label>
+              <select id="nytt_innertak" name="nytt_innertak">
+                <option value="Nej">Nej</option>
+                <option value="Ja">Ja</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="rivning_vaggar">Rivning av väggar (antal)</label>
+              <select id="rivning_vaggar" name="rivning_vaggar">
+                <option value="Nej">Nej</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="nya_vaggar_material">Nya väggar (material)</label>
+              <select id="nya_vaggar_material" name="nya_vaggar_material">
+                <option value="Nej">Nej / bestäms senare</option>
+                <option value="Regelvägg">Regelvägg</option>
+                <option value="Lättbetong">Lättbetong</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="gerade_horn_meter">Gerade hörn (meter)</label>
+              <input
+                type="number"
+                id="gerade_horn_meter"
+                name="gerade_horn_meter"
+                min="0"
+                step="1"
+                value="0"
+              />
+            </div>
+
+            <div class="field">
+              <label for="fyll_i_antal_meter">Fyll i antal meter (fris)</label>
+              <input
+                type="number"
+                id="fyll_i_antal_meter"
+                name="fyll_i_antal_meter"
+                min="0"
+                step="1"
+                value="0"
+              />
+            </div>
+          </div>
+
+          <h4 style="font-size: 13px; margin: 14px 0 6px">VVS – kortversion</h4>
+          <div class="field-grid">
+            <div class="field">
+              <label for="dolda_ror">Dolda rör (enbart arbete)</label>
+              <select id="dolda_ror" name="dolda_ror">
+                <option value="Nej">Nej</option>
+                <option value="Ja">Ja</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="wc">WC</label>
+              <select id="wc" name="wc">
+                <option value="Ingen WC">Ingen WC</option>
+                <option value="Golvmonterad WC">Golvmonterad WC</option>
+                <option value="Väggmonterad WC">Väggmonterad WC</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="duschblandare">Duschblandare</label>
+              <select id="duschblandare" name="duschblandare">
+                <option value="Standard">Standard</option>
+                <option value="Inbyggnadsdusch">Inbyggnadsdusch</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="tvattmaskin">Tvättmaskin</label>
+              <select id="tvattmaskin" name="tvattmaskin">
+                <option value="Nej">Nej</option>
+                <option value="Ja">Ja</option>
+              </select>
+            </div>
+          </div>
+
+          <h4 style="font-size: 13px; margin: 14px 0 6px">El</h4>
+          <div class="field-grid">
+            <div class="field">
+              <label for="takbelysning">Takbelysning</label>
+              <select id="takbelysning" name="takbelysning">
+                <option value="Plafond">Plafond</option>
+                <option value="Spotlights">Spotlights</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="spotlight_antal">Spotlight antal</label>
+              <input
+                type="number"
+                id="spotlight_antal"
+                name="spotlight_antal"
+                min="0"
+                step="1"
+                value="0"
+              />
+            </div>
+
+            <div class="field">
+              <label for="golvvarme">Golvvärme</label>
+              <select id="golvvarme" name="golvvarme">
+                <option value="Nej">Nej</option>
+                <option value="Ja">Ja</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="handdukstork">Handdukstork</label>
+              <select id="handdukstork" name="handdukstork">
+                <option value="Nej">Nej</option>
+                <option value="Ja">Ja</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <!-- STEP 4 – Kontakt & bekräftelse -->
+        <section class="step" data-step="4">
+          <h3 class="step-title">4. Kontaktuppgifter & sammanfattning</h3>
+          <div class="field-grid">
+            <div class="field">
+              <label for="contact_name">Namn</label>
+              <input
+                type="text"
+                id="contact_name"
+                name="contact_name"
+                placeholder="För- och efternamn"
+              />
+            </div>
+
+            <div class="field">
+              <label for="contact_phone">Telefon</label>
+              <input
+                type="tel"
+                id="contact_phone"
+                name="contact_phone"
+                placeholder="07X-XXX XX XX"
+              />
+            </div>
+
+            <div class="field field-full">
+              <label for="contact_email">E-post</label>
+              <input
+                type="email"
+                id="contact_email"
+                name="contact_email"
+                placeholder="namn@exempel.se"
+              />
+            </div>
+
+            <div class="field field-full">
+              <label for="extra_info">Önskemål / kommentarer</label>
+              <textarea
+                id="extra_info"
+                name="extra_info"
+                placeholder="T.ex. vilka material du funderar på, tidsplan osv."
+              ></textarea>
+            </div>
+          </div>
+
+          <p class="muted" style="margin-top: 10px">
+            När du skickar offertförfrågan får både du och Jobryan en
+            sammanfattning via e-post.
+          </p>
+        </section>
+
+        <!-- NAVIGATION -->
+        <div class="wizard-nav">
+          <button type="button" class="btn btn-outline" id="btn-prev">
+            Tillbaka
+          </button>
+          <div style="display: flex; gap: 8px">
+            <span id="form-status" class="muted"></span>
+            <button type="button" class="btn btn-primary" id="btn-next">
+              Nästa steg
+            </button>
+            <button
+              type="submit"
+              class="btn btn-primary"
+              id="btn-submit"
+              style="display: none"
+            >
+              Skicka offertförfrågan
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- RIGHT: summering -->
+    <aside class="card summary-card">
+      <div class="summary-header">
+        <div>
+          <div class="summary-title">Summering</div>
+          <div class="muted" id="summary-tagline">
+            Fyll i formuläret för att se preliminärt pris.
+          </div>
+        </div>
+        <div>
+          <div class="summary-price-main" id="summary-price-main">
+            –
+          </div>
+          <div class="summary-chip" id="summary-chip" style="display: none">
+            Preliminär offert inkl. moms
+          </div>
+        </div>
+      </div>
+
+      <div class="summary-section">
+        <h4>Fastighetsinfo</h4>
+        <ul class="summary-list" id="summary-property-list">
+          <li>Adress visas här</li>
+        </ul>
+      </div>
+
+      <div class="summary-section">
+        <h4>Badrum</h4>
+        <ul class="summary-list" id="summary-bathroom-list">
+          <li>Storlek, ytskikt och val visas här.</li>
+        </ul>
+      </div>
+
+      <div class="summary-section">
+        <h4>Kostnadsuppdelning</h4>
+        <ul class="summary-list" id="summary-price-breakdown">
+          <li>Arbete, material m.m. visas efter beräkning.</li>
+        </ul>
+      </div>
+    </aside>
   </div>
 
-  <!-- STEP CONTENT HOLDER -->
-  <div id="wizard-step"></div>
-
-  <!-- STEP NAVIGATION -->
-  <div id="wizard-nav">
-    <button id="prev-btn" class="nav-btn hidden">Tillbaka</button>
-    <button id="next-btn" class="nav-btn">Nästa</button>
-  </div>
-
-</div>
-
-<script src="app.js"></script>
+  <script src="app.js" defer></script>
 </body>
 </html>
