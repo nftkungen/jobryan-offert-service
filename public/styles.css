@@ -1,0 +1,103 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #f5f5f5;
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  padding: 40px;
+}
+
+#wizard-container {
+  width: 480px;
+  background: white;
+  padding: 25px 30px;
+  border-radius: 10px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+}
+
+#wizard-header {
+  margin-bottom: 20px;
+}
+
+#step-title {
+  font-size: 24px;
+  margin: 0;
+}
+
+#step-progress {
+  color: #777;
+  margin-top: 4px;
+}
+
+.step-block {
+  margin-bottom: 20px;
+}
+
+label {
+  font-size: 16px;
+  margin-bottom: 5px;
+  display: block;
+  font-weight: bold;
+}
+
+input, select {
+  width: 100%;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 16px;
+}
+
+#option-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.option-btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 6px;
+  border: 2px solid #ddd;
+  font-size: 16px;
+  cursor: pointer;
+  text-align: center;
+  user-select: none;
+}
+
+.option-btn.selected-green {
+  background: #7CF081;
+  border-color: #36b44b;
+}
+
+.option-btn.selected-orange {
+  background: #F8B56A;
+  border-color: #e38f20;
+}
+
+.nav-btn {
+  padding: 12px 20px;
+  background: #ff6d00;
+  color: white;
+  font-size: 17px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  flex: 1;
+}
+
+.nav-btn.hidden {
+  visibility: hidden;
+}
+
+#wizard-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+#summary-box {
+  padding: 15px;
+  background: #f3f3f3;
+  border-radius: 10px;
+  font-size: 16px;
+}
