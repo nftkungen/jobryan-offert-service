@@ -5,7 +5,7 @@ const API_URL = "/api/estimate/badrum";
 
 // All state for the wizard
 const initialState = {
-  step: 1,                 // 1-5
+  step: 1,                 // 1-9
 
   // --- Kontakt + fastighet (steg 1) ---
   kund_namn: "",
@@ -24,22 +24,28 @@ const initialState = {
   kvm_vagg: "",
   takhojd: 2.4,
 
-  // --- Snickeri / ytskikt (steg 3) ---
+  // --- Ytskikt (steg 3) ---
   microcement_golv: "Nej",
   microcement_vagg: "Nej",
+  gerade_horn_meter: "0",
+  fyll_i_antal_meter: "0",
+
+  // --- Snickeri (steg 4) ---
   ny_troskel: "Nej",
   byta_dorrblad: "Nej",
   byta_karm_dorr: "Nej",
   slipning_dorr: "Nej",
+  
+  // --- Inredning (steg 5) ---
   bankskiva_ovan_tm_tt: "Nej",
   vaggskap: "Nej",
   nytt_innertak: "Nej",
+
+  // --- Rivning & Väggar (steg 6) ---
   rivning_vaggar: "0",
   nya_vaggar_material: "Nej / bestäms senare",
-  gerade_horn_meter: "0",
-  fyll_i_antal_meter: "0",
-
-  // --- VVS (steg 4) ---
+  
+  // --- VVS (steg 7) ---
   dolda_ror: "Nej",
   wc: "Ingen WC",
   byte_av_avloppsgroda: "Nej",
@@ -48,19 +54,21 @@ const initialState = {
   duschblandare: "Standard",
   tvattstallsblandare: "Standard",
   tvattstall_kommod: "Kommod utan el",
+  inklakat_badkar: "Nej",
+  
+  // --- Maskiner & Värme (steg 8) ---
   tvattmaskin: "Nej",
   torktumlare: "Nej",
   torkskap: "Nej",
-  inklakat_badkar: "Nej",
   varme_vp: "Nej",
-
-  // --- El (steg 4) ---
-  takbelysning: "Plafond",
-  spotlight_antal: "0",
   golvvärme: "Nej",
   handdukstork: "Nej",
 
-  // --- API-resultat (steg 5) ---
+  // --- El (steg 9) ---
+  takbelysning: "Plafond",
+  spotlight_antal: "0",
+
+  // --- API-resultat (steg 10) ---
   loading: false,
   error: "",
   priceResult: null
@@ -92,6 +100,82 @@ const INCLUDED_OPTIONS = {
   varme_vp: ["Nej"],
   dolda_ror: ["Nej"]
 };
+
+// Labels for the dynamic summary
+const SUMMARY_LABELS = {
+  // Ytskikt
+  microcement_golv: "Microcement golv",
+  microcement_vagg: "Microcement vägg",
+  gerade_horn_meter: "Gerade hörn",
+  fyll_i_antal_meter: "Fris",
+  // Snickeri
+  ny_troskel: "Ny tröskel",
+  byta_dorrblad: "Byte av dörrblad",
+  byta_karm_dorr: "Byte av karm + dörr",
+  slipning_dorr: "Slipning av dörr",
+  // Inredning
+  bankskiva_ovan_tm_tt: "Bänkskiva",
+  vaggskap: "Väggskåp",
+  nytt_innertak: "Nytt innertak",
+  // Rivning
+  rivning_vaggar: "Rivning väggar",
+  nya_vaggar_material: "Nya väggar",
+  // VVS
+  dolda_ror: "Dolda rör",
+  wc: "WC",
+  byte_av_avloppsgroda: "Byte av avloppsgroda",
+  ny_slitsbotten: "Ny slitsbotten",
+  brunn: "Brunn",
+  duschblandare: "Duschblandare",
+  tvattstallsblandare: "Tvättställsblandare",
+  tvattstall_kommod: "Kommod",
+  inklakat_badkar: "Inklätt badkar",
+  // Maskiner
+  tvattmaskin: "Tvättmaskin",
+  torktumlare: "Torktumlare",
+  torkskap: "Torkskåp",
+  varme_vp: "Värme VP",
+  golvvärme: "Golvvärme",
+  handdukstork: "Handdukstork",
+  // El
+  takbelysning: "Takbelysning",
+  spotlight_antal: "Spotlights",
+};
+
+// Default values to ignore in summary
+const DEFAULT_VALUES = {
+  microcement_golv: "Nej",
+  microcement_vagg: "Nej",
+  gerade_horn_meter: "0",
+  fyll_i_antal_meter: "0",
+  ny_troskel: "Nej",
+  byta_dorrblad: "Nej",
+  byta_karm_dorr: "Nej",
+  slipning_dorr: "Nej",
+  bankskiva_ovan_tm_tt: "Nej",
+  vaggskap: "Nej",
+  nytt_innertak: "Nej",
+  rivning_vaggar: "0",
+  nya_vaggar_material: "Nej / bestäms senare",
+  dolda_ror: "Nej",
+  wc: "Ingen WC",
+  byte_av_avloppsgroda: "Nej",
+  ny_slitsbotten: "Nej",
+  brunn: "Standard",
+  duschblandare: "Standard",
+  tvattstallsblandare: "Standard",
+  tvattstall_kommod: "Kommod utan el",
+  inklakat_badkar: "Nej",
+  tvattmaskin: "Nej",
+  torktumlare: "Nej",
+  torkskap: "Nej",
+  varme_vp: "Nej",
+  golvvärme: "Nej",
+  handdukstork: "Nej",
+  takbelysning: "Plafond",
+  spotlight_antal: "0",
+};
+
 
 // ---------- RENDER ROOT ----------
 
@@ -125,13 +209,15 @@ function render() {
   wireEvents();
 }
 
+const TOTAL_STEPS = 10;
+
 function renderHeader() {
   return `
     <div class="wizard-header">
       <div>
         <h1 class="title">Offertkalkyl – Badrum</h1>
         <p class="subtitle">Svara på några frågor så räknar vi fram ett preliminärt pris.</p>
-        <div class="step-indicator">Steg ${state.step} av 5</div>
+        <div class="step-indicator">Steg ${state.step} av ${TOTAL_STEPS}</div>
       </div>
     </div>
   `;
@@ -146,11 +232,21 @@ function renderStep() {
     case 2:
       return renderStep2();
     case 3:
-      return renderStep3_Snickeri();
+      return renderStep3_Ytskikt();
     case 4:
-      return renderStep4_VvsEl();
+      return renderStep4_Snickeri();
     case 5:
-      return renderStep5_Pris();
+      return renderStep5_Inredning();
+    case 6:
+      return renderStep6_Rivning();
+    case 7:
+      return renderStep7_VVS();
+    case 8:
+      return renderStep8_Maskiner();
+    case 9:
+      return renderStep9_El();
+    case 10:
+      return renderStep10_Pris();
     default:
       return "";
   }
@@ -282,81 +378,25 @@ function renderStep2() {
   `;
 }
 
-// --- Step 3 – Snickeri ---
-function renderStep3_Snickeri() {
+// --- Step 3 – Ytskikt ---
+function renderStep3_Ytskikt() {
   return `
     <section class="card">
-      <h2>3. Utförande – Ytskikt & snickeri</h2>
-      <p class="muted">Välj ytskikt, dörrar och andra snickeridetaljer.</p>
-
-      ${renderSnickeriSection()} 
+      <h2>3. Ytskikt</h2>
+      <p class="muted">Välj ytskikt för golv och väggar.</p>
       
-      <div class="actions">
-        <button class="btn btn-ghost" data-prev>Tillbaka</button>
-        <button class="btn btn-primary" data-next>Nästa steg</button>
+      <div class="grid grid-2">
+        ${pillGroup("Microcement golv", "microcement_golv", YES_NO)}
+        ${pillGroup("Microcement vägg", "microcement_vagg", YES_NO)}
+        ${pillGroup("Gerade hörn (meter)", "gerade_horn_meter", [
+          "0", "2", "4", "6", "8", "10", "12"
+        ])}
+        <div class="field">
+          <label>Fyll i antal meter fris</label>
+          <input type="number" data-field="fyll_i_antal_meter"
+                 value="${state.fyll_i_antal_meter}">
+        </div>
       </div>
-    </section>
-  `;
-}
-
-function renderSnickeriSection() {
-  return `
-    <h3 class="section-title">Ytskikt & snickeri</h3>
-    <div class="grid grid-2">
-      ${pillGroup("Microcement golv", "microcement_golv", YES_NO)}
-      ${pillGroup("Microcement vägg", "microcement_vagg", YES_NO)}
-
-      ${pillGroup("Ny tröskel", "ny_troskel", YES_NO)}
-      ${pillGroup("Byta dörrblad", "byta_dorrblad", YES_NO)}
-
-      ${pillGroup("Byta karm + dörr", "byta_karm_dorr", YES_NO)}
-      ${pillGroup("Slipning dörr", "slipning_dorr", YES_NO)}
-
-      ${pillGroup("Bänkskiva ovan TM/TT", "bankskiva_ovan_tm_tt", YES_NO)}
-      ${pillGroup("Väggskåp", "vaggskap", YES_NO)}
-
-      ${pillGroup("Nytt innertak", "nytt_innertak", YES_NO)}
-      ${pillGroup("Rivning av väggar (antal)", "rivning_vaggar", [
-        "0",
-        "1",
-        "2",
-        "3",
-        "4"
-      ])}
-
-      ${pillGroup(
-        "Nya väggar (material)",
-        "nya_vaggar_material",
-        ["Nej / bestäms senare", "Lättvägg", "Massiv"]
-      )}
-
-      ${pillGroup("Gerade hörn (meter)", "gerade_horn_meter", [
-        "0",
-        "2",
-        "4",
-        "6",
-        "8",
-        "10",
-        "12"
-      ])}
-
-      <div class="field">
-        <label>Fyll i antal meter fris</label>
-        <input type="number" data-field="fyll_i_antal_meter"
-               value="${state.fyll_i_antal_meter}">
-      </div>
-    </div>
-  `;
-}
-
-// --- Step 4 – VVS & El ---
-function renderStep4_VvsEl() {
-  return `
-    <section class="card">
-      <h2>4. Utförande – VVS & El</h2>
-      <p class="muted">Välj installationer för VVS och el.</p>
-      
-      ${renderVvsElSection()} 
 
       <div class="actions">
         <button class="btn btn-ghost" data-prev>Tillbaka</button>
@@ -366,63 +406,168 @@ function renderStep4_VvsEl() {
   `;
 }
 
-function renderVvsElSection() {
+// --- Step 4 – Snickeri ---
+function renderStep4_Snickeri() {
   return `
-    <h3 class="section-title">VVS</h3>
-    <div class="grid grid-2">
-      ${pillGroup("Dolda rör (enbart arbete)", "dolda_ror", YES_NO)}
-      ${pillGroup("WC", "wc", WC_OPTS)}
-
-      ${pillGroup("Byte av avloppsgroda", "byte_av_avloppsgroda", YES_NO)}
-      ${pillGroup("Ny slitsbotten", "ny_slitsbotten", YES_NO)}
-
-      ${pillGroup("Brunn", "brunn", ["Standard", "Övrigt"])}
-      ${pillGroup("Duschblandare", "duschblandare", [
-        "Standard",
-        "Inbyggnadsdusch"
-      ])}
-
-      ${pillGroup("Tvättställsblandare", "tvattstallsblandare", [
-        "Standard",
-        "Övrigt"
-      ])}
-      ${pillGroup("Tvättställ / kommod", "tvattstall_kommod", [
-        "Kommod utan el",
-        "Med el / special"
-      ])}
-
-      ${pillGroup("Tvättmaskin", "tvattmaskin", YES_NO)}
-      ${pillGroup("Torktumlare", "torktumlare", YES_NO)}
-
-      ${pillGroup("Torkskåp", "torkskap", YES_NO)}
-      ${pillGroup("Inkläkat badkar", "inklakat_badkar", YES_NO)}
-
-      ${pillGroup("Värmepump / värme", "varme_vp", YES_NO)}
-    </div>
-
-    <h3 class="section-title">El</h3>
-    <div class="grid grid-2">
-      ${pillGroup("Takbelysning", "takbelysning", TAKBELYSNING_OPTS)}
-      <div class="field">
-        <label>Spotlight antal</label>
-        <input type="number" min="0" step="1"
-               data-field="spotlight_antal"
-               value="${state.spotlight_antal}">
+    <section class="card">
+      <h2>4. Snickeri (Dörrar & Tröskel)</h2>
+      <p class="muted">Behöver dörr, karm eller tröskel åtgärdas?</p>
+      
+      <div class="grid grid-2">
+        ${pillGroup("Ny tröskel", "ny_troskel", YES_NO)}
+        ${pillGroup("Byta dörrblad", "byta_dorrblad", YES_NO)}
+        ${pillGroup("Byta karm + dörr", "byta_karm_dorr", YES_NO)}
+        ${pillGroup("Slipning dörr", "slipning_dorr", YES_NO)}
       </div>
 
-      ${pillGroup("Golvvärme", "golvvärme", YES_NO)}
-      ${pillGroup("Handdukstork", "handdukstork", YES_NO)}
-    </div>
+      <div class="actions">
+        <button class="btn btn-ghost" data-prev>Tillbaka</button>
+        <button class="btn btn-primary" data-next>Nästa steg</button>
+      </div>
+    </section>
   `;
 }
 
-// --- Step 5 – Beräkna pris ---
-function renderStep5_Pris() {
+// --- Step 5 – Inredning ---
+function renderStep5_Inredning() {
+  return `
+    <section class="card">
+      <h2>5. Inredning & Tak</h2>
+      <p class="muted">Fast inredning som skåp och bänkskivor.</p>
+      
+      <div class="grid grid-2">
+        ${pillGroup("Bänkskiva ovan TM/TT", "bankskiva_ovan_tm_tt", YES_NO)}
+        ${pillGroup("Väggskåp", "vaggskap", YES_NO)}
+        ${pillGroup("Nytt innertak", "nytt_innertak", YES_NO)}
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-ghost" data-prev>Tillbaka</button>
+        <button class="btn btn-primary" data-next>Nästa steg</button>
+      </div>
+    </section>
+  `;
+}
+
+// --- Step 6 – Rivning & Väggar ---
+function renderStep6_Rivning() {
+  return `
+    <section class="card">
+      <h2>6. Rivning & Nya Väggar</h2>
+      <p class="muted">Ska befintliga väggar rivas eller nya byggas?</p>
+      
+      <div class="grid grid-2">
+        ${pillGroup("Rivning av väggar (antal)", "rivning_vaggar", [
+          "0", "1", "2", "3", "4"
+        ])}
+        ${pillGroup(
+          "Nya väggar (material)",
+          "nya_vaggar_material",
+          ["Nej / bestäms senare", "Lättvägg", "Massiv"]
+        )}
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-ghost" data-prev>Tillbaka</button>
+        <button class="btn btn-primary" data-next>Nästa steg</button>
+      </div>
+    </section>
+  `;
+}
+
+// --- Step 7 – VVS ---
+function renderStep7_VVS() {
+  return `
+    <section class="card">
+      <h2>7. VVS (Rör & Installationer)</h2>
+      <p class="muted">Välj VVS-installationer.</p>
+      
+      <div class="grid grid-2">
+        ${pillGroup("Dolda rör (enbart arbete)", "dolda_ror", YES_NO)}
+        ${pillGroup("WC", "wc", WC_OPTS)}
+        ${pillGroup("Byte av avloppsgroda", "byte_av_avloppsgroda", YES_NO)}
+        ${pillGroup("Ny slitsbotten", "ny_slitsbotten", YES_NO)}
+        ${pillGroup("Brunn", "brunn", ["Standard", "Övrigt"])}
+        ${pillGroup("Duschblandare", "duschblandare", [
+          "Standard",
+          "Inbyggnadsdusch"
+        ])}
+        ${pillGroup("Tvättställsblandare", "tvattstallsblandare", [
+          "Standard",
+          "Övrigt"
+        ])}
+        ${pillGroup("Tvättställ / kommod", "tvattstall_kommod", [
+          "Kommod utan el",
+          "Med el / special"
+        ])}
+        ${pillGroup("Inkläkat badkar", "inklakat_badkar", YES_NO)}
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-ghost" data-prev>Tillbaka</button>
+        <button class="btn btn-primary" data-next>Nästa steg</button>
+      </div>
+    </section>
+  `;
+}
+
+// --- Step 8 – Maskiner & Värme ---
+function renderStep8_Maskiner() {
+  return `
+    <section class="card">
+      <h2>8. Maskiner & Värme</h2>
+      <p class="muted">Värme och anslutning av maskiner.</p>
+      
+      <div class="grid grid-2">
+        ${pillGroup("Tvättmaskin", "tvattmaskin", YES_NO)}
+        ${pillGroup("Torktumlare", "torktumlare", YES_NO)}
+        ${pillGroup("Torkskåp", "torkskap", YES_NO)}
+        ${pillGroup("Värmepump / värme", "varme_vp", YES_NO)}
+        ${pillGroup("Golvvärme", "golvvärme", YES_NO)}
+        ${pillGroup("Handdukstork", "handdukstork", YES_NO)}
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-ghost" data-prev>Tillbaka</button>
+        <button class="btn btn-primary" data-next>Nästa steg</button>
+      </div>
+    </section>
+  `;
+}
+
+// --- Step 9 – El ---
+function renderStep9_El() {
+  return `
+    <section class="card">
+      <h2>9. El & Belysning</h2>
+      <p class="muted">Välj typ av belysning.</p>
+      
+      <div class="grid grid-2">
+        ${pillGroup("Takbelysning", "takbelysning", TAKBELYSNING_OPTS)}
+        <div class="field">
+          <label>Spotlight antal</label>
+          <input type="number" min="0" step="1"
+                 data-field="spotlight_antal"
+                 value="${state.spotlight_antal}">
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-ghost" data-prev>Tillbaka</button>
+        <button class="btn btn-primary" data-next>Nästa steg</button>
+      </div>
+    </section>
+  `;
+}
+
+
+// --- Step 10 – Beräkna pris ---
+function renderStep10_Pris() {
   const { loading, error, priceResult } = state;
 
   return `
     <section class="card">
-      <h2>5. Beräkna pris</h2>
+      <h2>10. Beräkna pris</h2>
       <p>Nu kan du beräkna ett preliminärt pris baserat på dina val.</p>
 
       ${
@@ -512,11 +657,34 @@ function pillGroup(label, field, options) {
 function renderSummary() {
   const p = state.priceResult;
 
+  // Build the dynamic list of selected options
+  const selectedOptions = Object.keys(SUMMARY_LABELS)
+    .map(key => {
+      const value = String(state[key]);
+      const defaultValue = String(DEFAULT_VALUES[key]);
+      
+      // Ignore if value is default (e.g., "Nej", "0", "Standard")
+      if (!value || value === defaultValue) {
+        return null;
+      }
+      
+      const label = SUMMARY_LABELS[key];
+      
+      // For "Ja" values, just show the label
+      if (value === "Ja") {
+        return `<li class="summary-item">${label}</li>`;
+      }
+      
+      // For other values (like numbers or specific choices), show "Label: Value"
+      return `<li class="summary-item">${label}: <strong>${escapeHtml(value)}</strong></li>`;
+    })
+    .filter(Boolean); // Remove null entries
+
   return `
     <aside class="summary card">
       <div class="summary-header">
         <h2>Summering</h2>
-        <p class="muted">Fyll i formuläret för att se preliminärt pris.</p>
+        <p class="muted">Dina val visas här allt eftersom.</p>
       </div>
 
       <div class="summary-block">
@@ -540,20 +708,17 @@ function renderSummary() {
   } m² · Takhöjd: ${state.takhojd || "-"} m<br>
           Zon: ${state.zon || "-"}
         </div>
-
-        <div class="summary-tags">
-          <div><strong>Snickeri:</strong> ${
-            state.nytt_innertak === "Ja" ? "Nytt innertak" : "Standardutförande"
-          }</div>
-          <div><strong>VVS:</strong> WC: ${state.wc}, Duschblandare: ${
-    state.duschblandare
-  }</div>
-          <div><strong>El:</strong> ${state.takbelysning}${
-    Number(state.spotlight_antal) > 0
-      ? ", " + state.spotlight_antal + " spotlights"
-      : ""
-  }</div>
-        </div>
+      </div>
+      
+      <div class="summary-block">
+        <h3>Valda Tillval</h3>
+        <ul class="summary-item-list">
+          ${
+            selectedOptions.length > 0
+              ? selectedOptions.join("")
+              : `<li class="summary-item-empty">Inga tillval valda.</li>`
+          }
+        </ul>
       </div>
 
       <div class="summary-block">
@@ -566,11 +731,11 @@ function renderSummary() {
                 <div class="value">${formatKr(p.pris_totalt_ink_moms)}</div>
               </div>
               <small class="muted">
-                Arbete, material m.m. uppdelas i den skarpa offerten.
+                Priset är en uppskattning. Vi kontaktar dig för en skarp offert.
               </small>
             `
             : `<small class="muted">
-                Arbete, material m.m. visas efter beräkning.
+                Priset beräknas i sista steget.
               </small>`
         }
       </div>
@@ -607,10 +772,6 @@ function wireEvents() {
     });
   });
 
-  // REMOVED Subtabs on step 3
-  
-  // REMOVED const gotoVvs
-
   const nextBtn = root.querySelector("[data-next]");
   if (nextBtn) nextBtn.addEventListener("click", handleNext);
 
@@ -622,7 +783,7 @@ function wireEvents() {
 }
 
 function handleNext() {
-  if (state.step < 5) {
+  if (state.step < TOTAL_STEPS) {
     setState({ step: state.step + 1 });
   }
 }
@@ -637,46 +798,10 @@ async function handleCalculate() {
   try {
     setState({ loading: true, error: "" });
 
-    const payload = {
-      postnummer: state.postnummer,
-      zon: Number(state.zon) || 0,
-      kvm_golv: Number(state.kvm_golv) || 0,
-      kvm_vagg: Number(state.kvm_vagg) || 0,
-      takhojd: Number(state.takhojd) || 0,
-
-      microcement_golv: state.microcement_golv,
-      microcement_vagg: state.microcement_vagg,
-      ny_troskel: state.ny_troskel,
-      byta_dorrblad: state.byta_dorrblad,
-      byta_karm_dorr: state.byta_karm_dorr,
-      slipning_dorr: state.slipning_dorr,
-      bankskiva_ovan_tm_tt: state.bankskiva_ovan_tm_tt,
-      vaggskap: state.vaggskap,
-      nytt_innertak: state.nytt_innertak,
-      rivning_vaggar: Number(state.rivning_vaggar) || 0,
-      nya_vaggar_material: state.nya_vaggar_material,
-      gerade_horn_meter: Number(state.gerade_horn_meter) || 0,
-      fyll_i_antal_meter: Number(state.fyll_i_antal_meter) || 0,
-
-      dolda_ror: state.dolda_ror,
-      wc: state.wc,
-      byte_av_avloppsgroda: state.byte_av_avloppsgroda,
-      ny_slitsbotten: state.ny_slitsbotten,
-      brunn: state.brunn,
-      duschblandare: state.duschblandare,
-      tvattstallsblandare: state.tvattstallsblandare,
-      tvattstall_kommod: state.tvattstall_kommod,
-      tvattmaskin: state.tvattmaskin,
-      torktumlare: state.torktumlare,
-      torkskap: state.torkskap,
-      inklakat_badkar: state.inklakat_badkar,
-      varme_vp: state.varme_vp,
-
-      takbelysning: state.takbelysning,
-      spotlight_antal: Number(state.spotlight_antal) || 0,
-      golvvärme: state.golvvärme,
-      handdukstork: state.handdukstork
-    };
+    const payload = { ...initialState, ...state }; // Send all state
+    delete payload.loading;
+    delete payload.error;
+    delete payload.priceResult;
 
     const res = await fetch(API_URL, {
       method: "POST",
