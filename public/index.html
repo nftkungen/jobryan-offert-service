@@ -2,368 +2,210 @@
 <html lang="sv">
 <head>
   <meta charset="UTF-8" />
-  <title>Jobryan – Offert & prisberäkning</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jobryan Offert — Badrumsberäkning</title>
+
   <style>
-    :root {
-      --bg: #f3f4f6;
-      --card: #ffffff;
-      --ink: #0f172a;
-      --muted: #6b7280;
-      --border: #e5e7eb;
-      --accent: #f25730;
-      --accent-soft: #ffe1d7;
-    }
-    * { box-sizing: border-box; }
     body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 30px;
       margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-        Roboto, Helvetica, Arial, sans-serif;
-      background: var(--bg);
-      color: var(--ink);
     }
-    .page {
-      max-width: 960px;
-      margin: 24px auto;
-      padding: 0 16px 32px;
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
     }
-    header {
-      text-align: center;
-      margin-bottom: 16px;
+
+    h1 {
+      margin-bottom: 20px;
+      font-size: 28px;
     }
-    header h1 {
-      margin: 4px 0;
-      font-size: 1.75rem;
+
+    label {
+      font-weight: bold;
+      margin-top: 15px;
+      display: block;
     }
-    header p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 0.95rem;
+
+    input, select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      margin-top: 5px;
     }
-    .card {
-      background: var(--card);
-      border-radius: 20px;
-      border: 1px solid var(--border);
-      box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
-      padding: 18px 18px 22px;
-      margin-top: 16px;
-    }
-    h2.section-title {
-      margin: 0 0 12px;
-      font-size: 1.2rem;
-    }
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px 16px;
-    }
-    .grid-3 {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px 16px;
-    }
-    @media (max-width: 720px) {
-      .grid-2, .grid-3 {
-        grid-template-columns: 1fr;
-      }
-    }
-    label.flabel {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      font-size: 0.9rem;
-      font-weight: 600;
-    }
-    label.flabel span {
-      color: var(--muted);
-      font-weight: 400;
-      font-size: 0.8rem;
-    }
-    input.finput,
-    select.finput {
-      border-radius: 12px;
-      border: 2px solid var(--border);
-      padding: 9px 11px;
-      font-size: 0.95rem;
-      outline: none;
-      background: #ffffff;
-    }
-    input.finput:focus,
-    select.finput:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px var(--accent-soft);
-    }
-    .section-divider {
-      margin: 16px 0;
-      height: 1px;
-      background: var(--border);
-    }
-    .actions {
-      margin-top: 14px;
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    .btn {
-      border-radius: 999px;
-      padding: 10px 18px;
-      font-weight: 600;
-      font-size: 0.95rem;
-      border: 2px solid var(--border);
-      background: #ffffff;
+
+    button {
+      margin-top: 20px;
+      background: #ff6600;
+      color: white;
+      padding: 15px;
+      width: 100%;
+      border: none;
+      font-size: 18px;
+      border-radius: 8px;
       cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
     }
-    .btn.primary {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: #ffffff;
+
+    #resultBox {
+      display: none;
+      margin-top: 30px;
+      padding: 20px;
+      background: #e8f8e8;
+      border-left: 5px solid #1a8f1a;
+      border-radius: 8px;
     }
-    .btn:disabled {
-      opacity: 0.7;
-      cursor: default;
+
+    .price-line {
+      margin-bottom: 10px;
+      font-size: 18px;
     }
-    .summary-box {
-      margin-top: 16px;
-      border-radius: 16px;
-      border: 1px solid var(--border);
-      background: #f9fafb;
-      padding: 12px 14px;
-      font-size: 0.95rem;
-      color: var(--ink);
-    }
-    .summary-box h3 {
-      margin: 0 0 6px;
-      font-size: 1rem;
-    }
-    .summary-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 4px 18px;
-      font-size: 0.92rem;
-    }
-    @media (max-width: 600px) {
-      .summary-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-    .summary-label {
-      color: var(--muted);
-    }
-    .summary-value {
-      font-weight: 600;
-    }
-    .summary-note {
-      margin-top: 6px;
-      font-size: 0.8rem;
-      color: var(--muted);
-    }
-    .error-text {
-      color: #b91c1c;
-      font-size: 0.9rem;
+
+    .price-label {
+      font-weight: bold;
     }
   </style>
 </head>
+
 <body>
-  <div class="page">
-    <header>
-      <h1>Jobryan – Offert & prisberäkning badrum</h1>
-      <p>Fyll i uppgifterna nedan för att få en preliminär prisbild från vår interna kalkyl.</p>
-    </header>
+  <div class="container">
 
-    <section class="card">
-      <h2 class="section-title">Projektinformation</h2>
+    <h1>Badrumsberäkning</h1>
 
-      <form id="badrumForm" autocomplete="off">
-        <div class="grid-2">
-          <label class="flabel">
-            Postnummer
-            <span>För att räkna rätt zon</span>
-            <input class="finput" name="postnummer" placeholder="t.ex. 12051" />
-          </label>
+    <!-- === INPUT FORM === -->
+    <label>Postnummer</label>
+    <input id="postnummer" />
 
-          <label class="flabel">
-            Zon
-            <span>1–4 beroende på avstånd (om ni vet)</span>
-            <input class="finput" name="zon" type="number" min="1" max="4" step="1" placeholder="t.ex. 3" />
-          </label>
-        </div>
+    <label>Zon</label>
+    <select id="zon">
+      <option value="1">1</option>
+      <option value="2">2</option>
+      <option value="3" selected>3</option>
+      <option value="4">4</option>
+    </select>
 
-        <div class="section-divider"></div>
+    <label>Kvm golv</label>
+    <input id="kvm_golv" />
 
-        <h2 class="section-title">Mått</h2>
+    <label>Kvm vägg</label>
+    <input id="kvm_vagg" />
 
-        <div class="grid-3">
-          <label class="flabel">
-            Kvm golv
-            <span>Golvytan i m²</span>
-            <input class="finput" name="kvm_golv" type="number" step="0.1" placeholder="t.ex. 14" />
-          </label>
-          <label class="flabel">
-            Kvm vägg
-            <span>Väggyta i m²</span>
-            <input class="finput" name="kvm_vagg" type="number" step="0.1" placeholder="t.ex. 38.9" />
-          </label>
-          <label class="flabel">
-            Takhöjd (m)
-            <span>Standard brukar vara 2.4–2.7 m</span>
-            <input class="finput" name="takhojd" type="number" step="0.01" placeholder="t.ex. 2.6" />
-          </label>
-        </div>
+    <label>Takhöjd (m)</label>
+    <input id="takhojd" />
 
-        <div class="section-divider"></div>
+    <label>Microcement golv</label>
+    <select id="microcement_golv">
+      <option>Ja</option>
+      <option selected>Nej</option>
+    </select>
 
-        <h2 class="section-title">Val av utförande</h2>
+    <label>Microcement vägg</label>
+    <select id="microcement_vagg">
+      <option>Ja</option>
+      <option selected>Nej</option>
+    </select>
 
-        <div class="grid-2">
-          <label class="flabel">
-            Microcement golv
-            <select class="finput" name="microcement_golv">
-              <option value="">Välj...</option>
-              <option value="Ja">Ja</option>
-              <option value="Nej">Nej</option>
-            </select>
-          </label>
+    <label>Ny tröskel</label>
+    <select id="ny_troskel">
+      <option>Ja</option>
+      <option selected>Nej</option>
+    </select>
 
-          <label class="flabel">
-            Microcement vägg
-            <select class="finput" name="microcement_vagg">
-              <option value="">Välj...</option>
-              <option value="Ja">Ja</option>
-              <option value="Nej">Nej</option>
-            </select>
-          </label>
-        </div>
+    <label>Byta dörrblad</label>
+    <select id="byta_dorrblad">
+      <option>Ja</option>
+      <option selected>Nej</option>
+    </select>
 
-        <div class="grid-2" style="margin-top:12px;">
-          <label class="flabel">
-            Ny tröskel
-            <select class="finput" name="ny_troskel">
-              <option value="">Välj...</option>
-              <option value="Ja">Ja</option>
-              <option value="Nej">Nej</option>
-            </select>
-          </label>
+    <label>Byta karm + dörr</label>
+    <select id="byta_karm_dorr">
+      <option>Ja</option>
+      <option selected>Nej</option>
+    </select>
 
-          <label class="flabel">
-            Byta dörrblad
-            <select class="finput" name="byta_dorrblad">
-              <option value="">Välj...</option>
-              <option value="Ja">Ja</option>
-              <option value="Nej">Nej</option>
-            </select>
-          </label>
-        </div>
+    <label>Slipning dörr</label>
+    <select id="slipning_dorr">
+      <option>Ja</option>
+      <option selected>Nej</option>
+    </select>
 
-        <div class="grid-2" style="margin-top:12px;">
-          <label class="flabel">
-            Byta karm + dörr
-            <select class="finput" name="byta_karm_dorr">
-              <option value="">Välj...</option>
-              <option value="Ja">Ja</option>
-              <option value="Nej">Nej</option>
-            </select>
-          </label>
+    <label>Bänkskiva ovan TM/TT</label>
+    <select id="bankskiva_ovan_tm_tt">
+      <option>Ja</option>
+      <option selected>Nej</option>
+    </select>
 
-          <label class="flabel">
-            Slipning dörr
-            <select class="finput" name="slipning_dorr">
-              <option value="">Välj...</option>
-              <option value="Ja">Ja</option>
-              <option value="Nej">Nej</option>
-            </select>
-          </label>
-        </div>
+    <label>Väggskåp</label>
+    <select id="vaggskap">
+      <option>Ja</option>
+      <option selected>Nej</option>
+    </select>
 
-        <div class="grid-2" style="margin-top:12px;">
-          <label class="flabel">
-            Bänkskiva ovan TM/TT
-            <select class="finput" name="bankskiva_ovan_tm_tt">
-              <option value="">Välj...</option>
-              <option value="Ja">Ja</option>
-              <option value="Nej">Nej</option>
-            </select>
-          </label>
+    <label>Nytt innertak</label>
+    <select id="nytt_innertak">
+      <option>Ja</option>
+      <option selected>Nej</option>
+    </select>
 
-          <label class="flabel">
-            Väggskåp
-            <select class="finput" name="vaggskap">
-              <option value="">Välj...</option>
-              <option value="Ja">Ja</option>
-              <option value="Nej">Nej</option>
-            </select>
-          </label>
-        </div>
+    <label>Rivning av väggar</label>
+    <input id="rivning_vaggar" />
 
-        <div class="grid-2" style="margin-top:12px;">
-          <label class="flabel">
-            Nytt innertak
-            <select class="finput" name="nytt_innertak">
-              <option value="">Välj...</option>
-              <option value="Ja">Ja</option>
-              <option value="Nej">Nej</option>
-            </select>
-          </label>
+    <label>Nya väggar (material)</label>
+    <select id="nya_vaggar_material">
+      <option>Ja</option>
+      <option selected>Nej</option>
+    </select>
 
-          <label class="flabel">
-            Rivning av väggar (antal)
-            <input class="finput" name="rivning_vaggar" type="number" min="0" step="1" placeholder="t.ex. 2" />
-          </label>
-        </div>
+    <label>Gerade hörn (meter)</label>
+    <input id="gerade_horn_meter" />
 
-        <div class="grid-2" style="margin-top:12px;">
-          <label class="flabel">
-            Nya väggar (material)
-            <select class="finput" name="nya_vaggar_material">
-              <option value="">Välj...</option>
-              <option value="Ja">Ja</option>
-              <option value="Nej">Nej</option>
-            </select>
-          </label>
+    <label>Fyll i antal meter</label>
+    <input id="fyll_i_antal_meter" />
 
-          <label class="flabel">
-            Gerade hörn / meter
-            <input class="finput" name="gerade_horn_meter" type="number" min="0" step="1" placeholder="t.ex. 0 eller 10" />
-          </label>
-        </div>
+    <label>Dolda rör</label>
+    <select id="dolda_ror">
+      <option>Ja</option>
+      <option selected>Nej</option>
+    </select>
 
-        <div class="grid-2" style="margin-top:12px;">
-          <label class="flabel">
-            Fyll i antal meter
-            <input class="finput" name="fyll_i_antal_meter" type="number" min="0" step="0.1" placeholder="t.ex. 12" />
-          </label>
+    <button onclick="calculatePrice()">Beräkna pris för badrum</button>
 
-          <label class="flabel">
-            Dolda rör
-            <select class="finput" name="dolda_ror">
-              <option value="">Välj...</option>
-              <option value="Ja">Ja</option>
-              <option value="Nej">Nej</option>
-            </select>
-          </label>
-        </div>
-
-        <div class="actions">
-          <button type="button" id="calc-price-btn" class="btn primary">
-            Beräkna pris för badrum
-          </button>
-        </div>
-      </form>
-
-      <div id="price-summary" class="summary-box">
-        <h3>Sammanfattning & preliminär prisbild</h3>
-        <div id="price-summary-content">
-          <span style="color:#6b7280;">
-            Ingen beräkning gjord ännu. Fyll i formuläret och klicka på
-            <strong>”Beräkna pris för badrum”</strong>.
-          </span>
-        </div>
+    <!-- === RESULT BOX === -->
+    <div id="resultBox">
+      <div class="price-line">
+        <span class="price-label">Arbetskostnad ex moms:</span>
+        <span id="p1"></span>
       </div>
 
-    </section>
+      <div class="price-line">
+        <span class="price-label">Grundmaterial ex moms:</span>
+        <span id="p2"></span>
+      </div>
+
+      <div class="price-line">
+        <span class="price-label">Resekostnad ex moms:</span>
+        <span id="p3"></span>
+      </div>
+
+      <div class="price-line">
+        <span class="price-label">Sophantering ex moms:</span>
+        <span id="p4"></span>
+      </div>
+
+      <hr/>
+
+      <div class="price-line" style="font-size:22px;">
+        <span class="price-label">Totalt ex moms:</span>
+        <span id="ptot" style="font-weight:bold"></span>
+      </div>
+    </div>
+
   </div>
 
   <script src="app.js"></script>
