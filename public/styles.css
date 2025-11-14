@@ -245,7 +245,9 @@ input[type="range"] {
 .summary-header .muted {
   font-size: 13px;
   color: var(--text-muted);
-  line-height: 1.4; /* Fix for overlap */
+  line-height: 1.4;
+  display: block; /* **FIX** for overlap */
+  margin-top: 4px;  /* **FIX** for overlap */
 }
 .summary-block {
   margin-top: 12px;
@@ -383,11 +385,18 @@ input[type="range"] {
   .grid-2 {
     grid-template-columns: minmax(0, 1fr); /* Stack grid items */
   }
+
+  /* **FIX** for slider layout */
+  .field-slider {
+     position: relative; /* Keep this */
+     padding-top: 24px; /* Make space for the pill */
+  }
   .field-slider .slider-value {
-    /* Adjust slider value position for single column */
-    top: 0px; 
+     top: 0px; /* Move pill to the top */
+     right: 0; /* Keep it right-aligned */
+     /* it's already position: absolute */
   }
   .field-slider input[type="range"] {
-    margin-top: 30px; /* Add space for the value pill */
+     margin-top: 0; /* Remove the old margin */
   }
 }
