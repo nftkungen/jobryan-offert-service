@@ -1,273 +1,80 @@
 <!DOCTYPE html>
 <html lang="sv">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Jobryan – Badrumsberäkning</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-    <style>
-      :root {
-        --bg: #f5f5f7;
-        --card-bg: #ffffff;
-        --primary: #ff6a00;
-        --primary-dark: #e25900;
-        --border: #e1e1e6;
-        --text-main: #111827;
-        --text-muted: #6b7280;
-        --radius: 14px;
-      }
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Badrumsberäkning</title>
 
-      * {
-        box-sizing: border-box;
-      }
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f6f6f6;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+    }
 
-      body {
-        margin: 0;
-        font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-        background: radial-gradient(circle at top, #ffe4cc 0, #f5f5f7 45%);
-        color: var(--text-main);
-      }
+    #app {
+      width: 100%;
+      max-width: 480px;
+      background: white;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.1);
+    }
 
-      .offert-page {
-        min-height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 24px;
-      }
+    .step-title {
+      font-size: 22px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
 
-      .offert-card {
-        width: 100%;
-        max-width: 520px;
-        background: var(--card-bg);
-        border-radius: 24px;
-        border: 1px solid rgba(15, 23, 42, 0.05);
-        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
-        padding: 24px 24px 20px;
-      }
+    .input-group {
+      margin-bottom: 18px;
+    }
 
-      .offert-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 18px;
-      }
+    label {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
 
-      .offert-title {
-        font-size: 20px;
-        font-weight: 600;
-        letter-spacing: -0.02em;
-      }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      font-size: 15px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
 
-      .offert-subtitle {
-        font-size: 13px;
-        color: var(--text-muted);
-        margin-top: 4px;
-      }
+    button {
+      width: 100%;
+      background: #ff6200;
+      border: none;
+      padding: 14px;
+      margin-top: 15px;
+      color: white;
+      font-size: 17px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
 
-      .step-indicator {
-        font-size: 12px;
-        color: var(--text-muted);
-      }
+    button:hover {
+      background: #e05800;
+    }
 
-      .step-dots {
-        display: flex;
-        gap: 4px;
-        margin-top: 4px;
-        justify-content: flex-end;
-      }
+    .summary-box {
+      padding: 15px;
+      background: #efefef;
+      border-radius: 6px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
 
-      .step-dot {
-        width: 7px;
-        height: 7px;
-        border-radius: 999px;
-        background: #e5e7eb;
-      }
-
-      .step-dot.active {
-        width: 18px;
-        background: var(--primary);
-      }
-
-      form {
-        margin: 0;
-      }
-
-      .field-group {
-        margin-bottom: 14px;
-      }
-
-      .field-row {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 10px;
-      }
-
-      .field-label {
-        font-size: 12px;
-        font-weight: 500;
-        color: var(--text-muted);
-        margin-bottom: 4px;
-      }
-
-      .field-input,
-      .field-select,
-      .field-textarea {
-        width: 100%;
-        border-radius: 10px;
-        border: 1px solid var(--border);
-        padding: 9px 10px;
-        font-size: 14px;
-        outline: none;
-        background-color: #f9fafb;
-        transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s;
-      }
-
-      .field-input:focus,
-      .field-select:focus,
-      .field-textarea:focus {
-        border-color: var(--primary);
-        box-shadow: 0 0 0 1px rgba(255, 106, 0, 0.18);
-        background-color: #ffffff;
-      }
-
-      .field-textarea {
-        resize: vertical;
-        min-height: 70px;
-      }
-
-      .helper {
-        font-size: 11px;
-        color: var(--text-muted);
-        margin-top: 3px;
-      }
-
-      .summary-box {
-        border-radius: 14px;
-        background: #f9fafb;
-        border: 1px solid var(--border);
-        padding: 12px 14px;
-        margin-bottom: 12px;
-        font-size: 13px;
-      }
-
-      .summary-row {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 4px;
-      }
-
-      .summary-label {
-        color: var(--text-muted);
-      }
-
-      .summary-value {
-        font-weight: 500;
-      }
-
-      .summary-total {
-        font-weight: 600;
-        font-size: 15px;
-        margin-top: 6px;
-      }
-
-      .error-banner {
-        background: #fef2f2;
-        border-radius: 10px;
-        border: 1px solid #fecaca;
-        color: #b91c1c;
-        font-size: 12px;
-        padding: 8px 10px;
-        margin-bottom: 12px;
-      }
-
-      .success-banner {
-        background: #ecfdf3;
-        border-radius: 10px;
-        border: 1px solid #bbf7d0;
-        color: #166534;
-        font-size: 12px;
-        padding: 8px 10px;
-        margin-bottom: 12px;
-      }
-
-      .offert-footer {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-top: 14px;
-        gap: 10px;
-      }
-
-      .btn {
-        border-radius: 999px;
-        border: none;
-        cursor: pointer;
-        padding: 9px 16px;
-        font-size: 14px;
-        font-weight: 500;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
-      }
-
-      .btn-primary {
-        background: var(--primary);
-        color: white;
-        flex: 1;
-      }
-
-      .btn-primary:hover {
-        background: var(--primary-dark);
-        box-shadow: 0 10px 25px rgba(249, 115, 22, 0.35);
-        transform: translateY(-1px);
-      }
-
-      .btn-secondary {
-        background: #f3f4f6;
-        color: #111827;
-        padding-inline: 12px;
-      }
-
-      .btn-secondary:hover {
-        background: #e5e7eb;
-      }
-
-      .btn[disabled] {
-        opacity: 0.6;
-        cursor: default;
-        box-shadow: none;
-        transform: none;
-      }
-
-      .price-pill {
-        font-size: 13px;
-        padding: 4px 9px;
-        border-radius: 999px;
-        background: rgba(255, 106, 0, 0.07);
-        color: var(--primary-dark);
-        font-weight: 500;
-      }
-
-      @media (max-width: 540px) {
-        .offert-card {
-          padding: 18px 16px 16px;
-          border-radius: 18px;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <div class="offert-page">
-      <div class="offert-card">
-        <div id="app"></div>
-      </div>
-    </div>
-    <script src="app.js" defer></script>
-  </body>
+<body>
+  <div id="app"></div>
+  <script src="app.js"></script>
+</body>
 </html>
