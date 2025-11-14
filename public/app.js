@@ -1,331 +1,657 @@
-// SIMPLE STATE OBJECT
-const state = {
-  // step 1
+// ===== Jobryan Offert Wizard – Badrum =====
+
+// API endpoint (relative – works on Render when frontend & backend are same app)
+const API_URL = "/api/estimate/badrum";
+
+// All state for the wizard
+const initialState = {
+  step: 1,                 // 1–4
+  subStep3: "snickeri",    // "snickeri" | "vvsEl"
+
+  // --- Kontakt + fastighet (steg 1) ---
+  kund_namn: "",
+  kund_tel: "",
+  kund_email: "",
   address: "",
   propertyType: "Lägenhet",
   era: "60-tal",
   floor: "3 tr",
-  lift: "Stor",
+  elevator: "Stor",
 
-  // step 2
+  // --- Storlek (steg 2) ---
   postnummer: "",
   zon: "3",
   kvm_golv: 8.5,
   kvm_vagg: "",
   takhojd: 2.4,
 
-  // step 3 – snickeri
+  // --- Snickeri / ytskikt (steg 3A) ---
   microcement_golv: "Nej",
   microcement_vagg: "Nej",
-  ny_troskel: "Ja",
+  ny_troskel: "Nej",
   byta_dorrblad: "Nej",
   byta_karm_dorr: "Nej",
   slipning_dorr: "Nej",
   bankskiva_ovan_tm_tt: "Nej",
   vaggskap: "Nej",
-  nytt_innertak: "Ja",
-  rivning_vaggar: "Nej",
-  nya_vaggar_material: "Nej",
-  gerade_horn_meter: "Nej",
-  fyll_i_antal_meter: 0,
+  nytt_innertak: "Nej",
+  rivning_vaggar: "0",
+  nya_vaggar_material: "Nej / bestäms senare",
+  gerade_horn_meter: "0",
+  fyll_i_antal_meter: "0",
 
-  // VVS
+  // --- VVS (steg 3B) ---
   dolda_ror: "Nej",
   wc: "Ingen WC",
+  byte_av_avloppsgroda: "Nej",
+  ny_slitsbotten: "Nej",
+  brunn: "Standard",
   duschblandare: "Standard",
+  tvattstallsblandare: "Standard",
+  tvattstall_kommod: "Kommod utan el",
   tvattmaskin: "Nej",
   torktumlare: "Nej",
   torkskap: "Nej",
+  inklakat_badkar: "Nej",
+  varme_vp: "Nej",
 
-  // El
+  // --- El (steg 3B) ---
   takbelysning: "Plafond",
-  spotlight_antal: 0,
-  golvvarme: "Nej",
+  spotlight_antal: "0",
+  golvvärme: "Nej",
   handdukstork: "Nej",
 
-  // contact
-  contact_namn: "",
-  contact_tel: "",
-  contact_mail: "",
-
-  // price result
-  price: null,
-  price_breakdown: null
+  // --- API-resultat ---
+  loading: false,
+  error: "",
+  priceResult: null
 };
 
-// ---------- STEP / WIZARD ----------
-function initSteps() {
-  const steps = Array.from(document.querySelectorAll(".js-step"));
-  const nextBtns = document.querySelectorAll(".js-next");
-  const prevBtns = document.querySelectorAll(".js-prev");
-  const stepIndicator = document.getElementById("step-indicator");
-  const progressBar = document.getElementById("progress-bar");
+let state = { ...initialState };
 
-  let currentStep = 1;
-  const maxStep = 4;
+// --------- OPTION LISTS ----------
 
-  function showStep(step) {
-    currentStep = Math.min(Math.max(step, 1), maxStep);
-    steps.forEach((el) => {
-      const s = Number(el.dataset.step);
-      el.classList.toggle("is-active", s === currentStep);
-    });
-    stepIndicator.textContent = `Steg ${currentStep} av ${maxStep}`;
-    progressBar.style.width = `${((currentStep - 1) / (maxStep - 1)) * 100}%`;
-  }
+// Small helpers to avoid typos
+const YES_NO = ["Nej", "Ja"];
+const WC_OPTS = ["Ingen WC", "Golvmonterad WC", "Väggmonterad WC"];
+const TAKBELYSNING_OPTS = ["Plafond", "Spots i tak"];
 
-  nextBtns.forEach((btn) =>
-    btn.addEventListener("click", async () => {
-      if (currentStep === 3) {
-        // calculate price when leaving step 3
-        await calculatePrice();
-      }
-      showStep(currentStep + 1);
-      renderSummary();
-    })
+// Which choices are “ingår i grundpris” (green when selected)
+const INCLUDED_OPTIONS = {
+  duschblandare: ["Standard"],
+  tvattstallsblandare: ["Standard"],
+  tvattstall_kommod: ["Kommod utan el"],
+  wc: ["Ingen WC"],
+  brunn: ["Standard"],
+  golvvärme: ["Nej"],
+  handdukstork: ["Nej"],
+  takbelysning: ["Plafond"],
+  tvattmaskin: ["Nej"],
+  torktumlare: ["Nej"],
+  torkskap: ["Nej"],
+  inklakat_badkar: ["Nej"],
+  varme_vp: ["Nej"],
+  dolda_ror: ["Nej"]
+};
+
+// ---------- RENDER ROOT ----------
+
+function getRoot() {
+  return (
+    document.getElementById("js-root") ||
+    document.getElementById("app") ||
+    document.getElementById("app-root")
   );
-
-  prevBtns.forEach((btn) =>
-    btn.addEventListener("click", () => {
-      showStep(currentStep - 1);
-      renderSummary();
-    })
-  );
-
-  showStep(1);
 }
 
-// ---------- FORM BINDINGS ----------
-function bindInputs() {
-  // text / number inputs
-  document
-    .querySelectorAll("[data-field]")
-    .forEach((input) => {
-      const field = input.dataset.field;
-
-      // initial from state
-      if (input.type === "range" || input.type === "number") {
-        if (state[field] !== undefined) input.value = state[field];
-      } else if (input.tagName === "SELECT") {
-        if (state[field] !== undefined) input.value = state[field];
-      } else {
-        if (state[field]) input.value = state[field];
-      }
-
-      const evt =
-        input.tagName === "SELECT" || input.type === "range"
-          ? "change"
-          : "input";
-
-      input.addEventListener(evt, (e) => {
-        let v = e.target.value;
-        if (e.target.type === "number" || e.target.type === "range") {
-          v = e.target.value === "" ? "" : Number(e.target.value);
-        }
-        state[field] = v;
-        if (field === "kvm_golv") {
-          updateRangeLabel();
-        }
-        renderSummary();
-      });
-    });
-
-  updateRangeLabel();
+function setState(patch) {
+  state = { ...state, ...patch };
+  render();
 }
 
-function updateRangeLabel() {
-  const label = document.getElementById("kvm-golv-value");
-  if (label) {
-    label.textContent = `${state.kvm_golv} m²`;
+function render() {
+  const root = getRoot();
+  if (!root) return;
+
+  root.innerHTML = `
+    <div class="layout">
+      <div class="wizard">
+        ${renderHeader()}
+        ${renderStep()}
+      </div>
+      ${renderSummary()}
+    </div>
+  `;
+
+  wireEvents();
+}
+
+function renderHeader() {
+  return `
+    <div class="wizard-header">
+      <div>
+        <h1 class="title">Offertkalkyl – Badrum</h1>
+        <p class="subtitle">Svara på några frågor så räknar vi fram ett preliminärt pris.</p>
+        <div class="step-indicator">Steg ${state.step} av 4</div>
+      </div>
+    </div>
+  `;
+}
+
+// ---------- STEP CONTENT ----------
+
+function renderStep() {
+  switch (state.step) {
+    case 1:
+      return renderStep1();
+    case 2:
+      return renderStep2();
+    case 3:
+      return renderStep3();
+    case 4:
+      return renderStep4();
+    default:
+      return "";
   }
 }
 
-// ---------- CONVERT SELECTS TO PILL BUTTONS ----------
-function convertSelectsToPills() {
-  const selects = document.querySelectorAll("select[data-field]");
+// --- Step 1 – Fastighet + kontakt ---
+function renderStep1() {
+  return `
+    <section class="card">
+      <h2>1. Fastighetsinformation</h2>
+      <div class="grid grid-2">
+        <div class="field">
+          <label>Namn</label>
+          <input type="text" data-field="kund_namn" value="${escapeHtml(
+            state.kund_namn
+          )}" placeholder="För- och efternamn">
+        </div>
+        <div class="field">
+          <label>Telefon</label>
+          <input type="text" data-field="kund_tel" value="${escapeHtml(
+            state.kund_tel
+          )}" placeholder="t.ex. 070-123 45 67">
+        </div>
+        <div class="field">
+          <label>E-post</label>
+          <input type="email" data-field="kund_email" value="${escapeHtml(
+            state.kund_email
+          )}" placeholder="din@adress.se">
+        </div>
+        <div class="field">
+          <label>Adress</label>
+          <input type="text" data-field="address" value="${escapeHtml(
+            state.address
+          )}" placeholder="t.ex. Slätbaksvägen 17">
+        </div>
 
-  selects.forEach((select) => {
-    // keep original select hidden for safety
-    select.style.display = "none";
+        <div class="field">
+          <label>Fastighetstyp</label>
+          <select data-field="propertyType">
+            ${selectOptions(
+              ["Villa", "Lägenhet", "Radhus"],
+              state.propertyType
+            )}
+          </select>
+        </div>
 
-    const wrapper = document.createElement("div");
-    wrapper.className = "pill-group";
+        <div class="field">
+          <label>Byggår / era</label>
+          <select data-field="era">
+            ${selectOptions(
+              ["20-tal", "30-tal", "40-tal", "50-tal", "60-tal", "70-tal", "80-tal", "90-tal", "2000-tal"],
+              state.era
+            )}
+          </select>
+        </div>
 
-    Array.from(select.options).forEach((opt) => {
-      const pill = document.createElement("button");
-      pill.type = "button";
-      pill.className = "pill";
-      pill.textContent = opt.textContent;
-      if (opt.value === select.value) pill.classList.add("is-active");
+        <div class="field">
+          <label>Våningsplan</label>
+          <select data-field="floor">
+            ${selectOptions(
+              ["BV", "1 tr", "2 tr", "3 tr", "4 tr", "5 tr+"],
+              state.floor
+            )}
+          </select>
+        </div>
 
-      pill.addEventListener("click", () => {
-        select.value = opt.value;
-        // trigger change on select for state binding
-        select.dispatchEvent(new Event("change", { bubbles: true }));
+        <div class="field">
+          <label>Hiss</label>
+          <select data-field="elevator">
+            ${selectOptions(["Ingen", "Liten", "Stor"], state.elevator)}
+          </select>
+        </div>
+      </div>
 
-        wrapper
-          .querySelectorAll(".pill")
-          .forEach((p) => p.classList.remove("is-active"));
-        pill.classList.add("is-active");
-      });
-
-      wrapper.appendChild(pill);
-    });
-
-    select.parentNode.insertBefore(wrapper, select.nextSibling);
-  });
+      <div class="actions">
+        <button class="btn btn-primary" data-next>Nästa steg</button>
+      </div>
+    </section>
+  `;
 }
 
-// ---------- SUMMARY RENDERING ----------
+// --- Step 2 – Storlek & grunddata ---
+function renderStep2() {
+  return `
+    <section class="card">
+      <h2>2. Storlek och grunddata</h2>
+      <div class="grid grid-2">
+        <div class="field">
+          <label>Postnummer</label>
+          <input type="text" data-field="postnummer" value="${escapeHtml(
+            state.postnummer
+          )}" placeholder="t.ex. 12051">
+        </div>
+
+        <div class="field">
+          <label>Zone (1–4)</label>
+          <select data-field="zon">
+            ${selectOptions(["1", "2", "3", "4"], String(state.zon))}
+          </select>
+          <small class="help">För att beräkna resekostnad</small>
+        </div>
+
+        <div class="field field-slider">
+          <label>Storlek (golvyta)</label>
+          <input type="range" min="2" max="20" step="0.5"
+                 data-field="kvm_golv" value="${state.kvm_golv}">
+          <div class="slider-value">${state.kvm_golv} m²</div>
+        </div>
+
+        <div class="field">
+          <label>Väggyta (m²)</label>
+          <input type="number" data-field="kvm_vagg"
+                 value="${state.kvm_vagg}"
+                 placeholder="t.ex. 30">
+        </div>
+
+        <div class="field">
+          <label>Takhöjd (m)</label>
+          <input type="number" step="0.1" data-field="takhojd"
+                 value="${state.takhojd}">
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-ghost" data-prev>Tillbaka</button>
+        <button class="btn btn-primary" data-next>Nästa steg</button>
+      </div>
+    </section>
+  `;
+}
+
+// --- Step 3 – Utförande: Snickeri / VVS & El (sub-tabs) ---
+function renderStep3() {
+  return `
+    <section class="card">
+      <h2>3. Utförande – ytskikt & installationer</h2>
+      <p class="muted">Vi börjar med det som påverkar priset mest.</p>
+
+      <div class="subtabs">
+        <button type="button"
+          class="subtab ${state.subStep3 === "snickeri" ? "subtab--active" : ""}"
+          data-substep="snickeri">Ytskikt & snickeri</button>
+        <button type="button"
+          class="subtab ${state.subStep3 === "vvsEl" ? "subtab--active" : ""}"
+          data-substep="vvsEl">VVS & El</button>
+      </div>
+
+      ${
+        state.subStep3 === "snickeri"
+          ? renderSnickeriSection()
+          : renderVvsElSection()
+      }
+
+      <div class="actions">
+        <button class="btn btn-ghost" data-prev>Tillbaka</button>
+        ${
+          state.subStep3 === "snickeri"
+            ? `<button class="btn btn-primary" data-goto-vvs>Vidare till VVS & El</button>`
+            : `<button class="btn btn-primary" data-next>Nästa steg</button>`
+        }
+      </div>
+    </section>
+  `;
+}
+
+function renderSnickeriSection() {
+  return `
+    <h3 class="section-title">Ytskikt & snickeri</h3>
+    <div class="grid grid-2">
+      ${pillGroup("Microcement golv", "microcement_golv", YES_NO)}
+      ${pillGroup("Microcement vägg", "microcement_vagg", YES_NO)}
+
+      ${pillGroup("Ny tröskel", "ny_troskel", YES_NO)}
+      ${pillGroup("Byta dörrblad", "byta_dorrblad", YES_NO)}
+
+      ${pillGroup("Byta karm + dörr", "byta_karm_dorr", YES_NO)}
+      ${pillGroup("Slipning dörr", "slipning_dorr", YES_NO)}
+
+      ${pillGroup("Bänkskiva ovan TM/TT", "bankskiva_ovan_tm_tt", YES_NO)}
+      ${pillGroup("Väggskåp", "vaggskap", YES_NO)}
+
+      ${pillGroup("Nytt innertak", "nytt_innertak", YES_NO)}
+      ${pillGroup("Rivning av väggar (antal)", "rivning_vaggar", [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4"
+      ])}
+
+      ${pillGroup(
+        "Nya väggar (material)",
+        "nya_vaggar_material",
+        ["Nej / bestäms senare", "Lättvägg", "Massiv"]
+      )}
+
+      ${pillGroup("Gerade hörn (meter)", "gerade_horn_meter", [
+        "0",
+        "2",
+        "4",
+        "6",
+        "8",
+        "10",
+        "12"
+      ])}
+
+      <div class="field">
+        <label>Fyll i antal meter fris</label>
+        <input type="number" data-field="fyll_i_antal_meter"
+               value="${state.fyll_i_antal_meter}">
+      </div>
+    </div>
+  `;
+}
+
+function renderVvsElSection() {
+  return `
+    <h3 class="section-title">VVS</h3>
+    <div class="grid grid-2">
+      ${pillGroup("Dolda rör (enbart arbete)", "dolda_ror", YES_NO)}
+      ${pillGroup("WC", "wc", WC_OPTS)}
+
+      ${pillGroup("Byte av avloppsgroda", "byte_av_avloppsgroda", YES_NO)}
+      ${pillGroup("Ny slitsbotten", "ny_slitsbotten", YES_NO)}
+
+      ${pillGroup("Brunn", "brunn", ["Standard", "Övrigt"])}
+      ${pillGroup("Duschblandare", "duschblandare", [
+        "Standard",
+        "Inbyggnadsdusch"
+      ])}
+
+      ${pillGroup("Tvättställsblandare", "tvattstallsblandare", [
+        "Standard",
+        "Övrigt"
+      ])}
+      ${pillGroup("Tvättställ / kommod", "tvattstall_kommod", [
+        "Kommod utan el",
+        "Med el / special"
+      ])}
+
+      ${pillGroup("Tvättmaskin", "tvattmaskin", YES_NO)}
+      ${pillGroup("Torktumlare", "torktumlare", YES_NO)}
+
+      ${pillGroup("Torkskåp", "torkskap", YES_NO)}
+      ${pillGroup("Inkläkat badkar", "inklakat_badkar", YES_NO)}
+
+      ${pillGroup("Värmepump / värme", "varme_vp", YES_NO)}
+    </div>
+
+    <h3 class="section-title">El</h3>
+    <div class="grid grid-2">
+      ${pillGroup("Takbelysning", "takbelysning", TAKBELYSNING_OPTS)}
+      <div class="field">
+        <label>Spotlight antal</label>
+        <input type="number" min="0" step="1"
+               data-field="spotlight_antal"
+               value="${state.spotlight_antal}">
+      </div>
+
+      ${pillGroup("Golvvärme", "golvvärme", YES_NO)}
+      ${pillGroup("Handdukstork", "handdukstork", YES_NO)}
+    </div>
+  `;
+}
+
+// --- Step 4 – Beräkna pris ---
+function renderStep4() {
+  const { loading, error, priceResult } = state;
+
+  return `
+    <section class="card">
+      <h2>4. Beräkna pris</h2>
+      <p>Nu kan du beräkna ett preliminärt pris baserat på dina val.</p>
+
+      ${
+        error
+          ? `<div class="alert alert-error">${escapeHtml(error)}</div>`
+          : ""
+      }
+
+      <div class="actions">
+        <button class="btn btn-ghost" data-prev>Tillbaka</button>
+        <button class="btn btn-primary" data-calc ${
+          loading ? "disabled" : ""
+        }>
+          ${loading ? "Beräknar..." : "Beräkna pris"}
+        </button>
+      </div>
+
+      ${
+        priceResult && priceResult.ok
+          ? `
+            <div class="price-result">
+              <h3>Preliminärt totalpris</h3>
+              <p class="price">
+                ${formatKr(priceResult.pris_totalt_ink_moms)}
+              </p>
+              <ul class="price-breakdown">
+                <li><strong>Arbete exkl. moms:</strong> ${formatKr(
+                  priceResult.pris_arbete_ex_moms
+                )}</li>
+                <li><strong>Grundmaterial exkl. moms:</strong> ${formatKr(
+                  priceResult.pris_grundmaterial_ex_moms
+                )}</li>
+                <li><strong>Resekostnad exkl. moms:</strong> ${formatKr(
+                  priceResult.pris_resekostnad_ex_moms
+                )}</li>
+              </ul>
+              <p class="muted">Säljare från Jobryan kontaktar dig för att gå igenom detaljer och ta fram en skarp offert.</p>
+            </div>
+          `
+          : ""
+      }
+    </section>
+  `;
+}
+
+// ---------- PILL HELPERS ----------
+
+function pillGroup(label, field, options) {
+  const value = String(state[field] ?? "");
+
+  return `
+    <div class="field field-pills">
+      <label>${label}</label>
+      <div class="pill-row">
+        ${options
+          .map((opt) => {
+            const isActive = value === String(opt);
+            const includedList = INCLUDED_OPTIONS[field] || [];
+            const isIncluded = includedList.includes(String(opt));
+            const classes = ["pill"];
+
+            if (isActive) {
+              classes.push("pill--on");
+              if (isIncluded) classes.push("pill--included");
+            } else {
+              classes.push("pill--off");
+            }
+
+            return `
+              <button
+                type="button"
+                class="${classes.join(" ")}"
+                data-pill
+                data-field="${field}"
+                data-value="${escapeHtml(String(opt))}">
+                ${escapeHtml(String(opt))}
+              </button>`;
+          })
+          .join("")}
+      </div>
+    </div>
+  `;
+}
+
+// ---------- SUMMARY CARD ----------
+
 function renderSummary() {
-  // Fastighetsinfo
-  document.getElementById("sum-address").textContent =
-    state.address && state.address.trim().length > 0
-      ? state.address
-      : "Adress ej angiven";
+  const p = state.priceResult;
 
-  document.getElementById(
-    "sum-fastighet"
-  ).textContent = `${state.propertyType}, ${state.era}, våning ${state.floor}, hiss: ${state.lift}`;
+  return `
+    <aside class="summary card">
+      <div class="summary-header">
+        <h2>Summering</h2>
+        <p class="muted">Fyll i formuläret för att se preliminärt pris.</p>
+      </div>
 
-  // Badrum size
-  const kvmGolv =
-    state.kvm_golv && !isNaN(state.kvm_golv) ? `${state.kvm_golv} m²` : "– m²";
-  const kvmVagg =
-    state.kvm_vagg && !isNaN(state.kvm_vagg)
-      ? `${state.kvm_vagg} m²`
-      : "– m²";
-  const tak =
-    state.takhojd && !isNaN(state.takhojd) ? `${state.takhojd} m` : "– m";
+      <div class="summary-block">
+        <h3>Fastighetsinfo</h3>
+        <div class="summary-text">
+          ${state.address ? escapeHtml(state.address) : "Adress ej angiven"}<br>
+          ${escapeHtml(state.propertyType)}, ${escapeHtml(
+    state.era
+  )}<br>
+          Våningsplan: ${escapeHtml(state.floor)}, hiss: ${escapeHtml(
+    state.elevator
+  )}
+        </div>
+      </div>
 
-  document.getElementById(
-    "sum-size"
-  ).textContent = `Golv: ${kvmGolv} · Vägg: ${kvmVagg} · Takhöjd: ${tak}`;
+      <div class="summary-block">
+        <h3>Badrum</h3>
+        <div class="summary-text">
+          Golv: ${state.kvm_golv || "-"} m² · Vägg: ${
+    state.kvm_vagg || "-"
+  } m² · Takhöjd: ${state.takhojd || "-"} m<br>
+          Zon: ${state.zon || "-"}
+        </div>
 
-  document.getElementById("sum-zon").textContent = `Zon: ${
-    state.zon || "–"
-  }`;
+        <div class="summary-tags">
+          <div><strong>Snickeri:</strong> ${
+            state.nytt_innertak === "Ja" ? "Nytt innertak" : "Standardutförande"
+          }</div>
+          <div><strong>VVS:</strong> WC: ${state.wc}, Duschblandare: ${
+    state.duschblandare
+  }</div>
+          <div><strong>El:</strong> ${state.takbelysning}${
+    Number(state.spotlight_antal) > 0
+      ? ", " + state.spotlight_antal + " spotlights"
+      : ""
+  }</div>
+        </div>
+      </div>
 
-  // Snickeri chips
-  const snickeriContainer = document.getElementById("sum-snickeri-chips");
-  snickeriContainer.innerHTML = "";
-
-  function addChipSnickeri(condition, label) {
-    if (!condition) return;
-    const chip = document.createElement("span");
-    chip.className = "summary-chip summary-chip--accent";
-    chip.textContent = label;
-    snickeriContainer.appendChild(chip);
-  }
-
-  addChipSnickeri(state.microcement_golv === "Ja", "Microcement golv");
-  addChipSnickeri(state.microcement_vagg === "Ja", "Microcement vägg");
-  addChipSnickeri(state.ny_troskel === "Ja", "Ny tröskel");
-  addChipSnickeri(state.byta_dorrblad === "Ja", "Byta dörrblad");
-  addChipSnickeri(state.byta_karm_dorr === "Ja", "Byta karm + dörr");
-  addChipSnickeri(state.slipning_dorr === "Ja", "Slipning dörr");
-  addChipSnickeri(state.bankskiva_ovan_tm_tt === "Ja", "Bänkskiva TM/TT");
-  addChipSnickeri(state.vaggskap === "Ja", "Väggskåp");
-  addChipSnickeri(state.nytt_innertak === "Ja", "Nytt innertak");
-  if (state.rivning_vaggar !== "Nej") {
-    addChipSnickeri(true, `Rivning väggar: ${state.rivning_vaggar} st`);
-  }
-  if (state.nya_vaggar_material !== "Nej") {
-    addChipSnickeri(true, `Nya väggar: ${state.nya_vaggar_material}`);
-  }
-  if (state.gerade_horn_meter !== "Nej") {
-    addChipSnickeri(true, `Gerade hörn: ${state.gerade_horn_meter} m`);
-  }
-  if (state.fyll_i_antal_meter > 0) {
-    addChipSnickeri(true, `Fris: ${state.fyll_i_antal_meter} m`);
-  }
-
-  // VVS chips
-  const vvsContainer = document.getElementById("sum-vvs-chips");
-  vvsContainer.innerHTML = "";
-  function addChipVVS(condition, label) {
-    if (!condition) return;
-    const chip = document.createElement("span");
-    chip.className = "summary-chip";
-    chip.textContent = label;
-    vvsContainer.appendChild(chip);
-  }
-
-  addChipVVS(state.dolda_ror === "Ja", "Dolda rör");
-  addChipVVS(true, `WC: ${state.wc}`);
-  addChipVVS(true, `Duschblandare: ${state.duschblandare}`);
-  addChipVVS(state.tvattmaskin === "Ja", "Tvättmaskin");
-  addChipVVS(state.torktumlare === "Ja", "Torktumlare");
-  addChipVVS(state.torkskap === "Ja", "Torkskåp");
-
-  // El chips
-  const elContainer = document.getElementById("sum-el-chips");
-  elContainer.innerHTML = "";
-  function addChipEl(condition, label) {
-    if (!condition) return;
-    const chip = document.createElement("span");
-    chip.className = "summary-chip";
-    chip.textContent = label;
-    elContainer.appendChild(chip);
-  }
-
-  addChipEl(true, `Tak: ${state.takbelysning}`);
-  if (state.spotlight_antal > 0) {
-    addChipEl(true, `Spotlights: ${state.spotlight_antal} st`);
-  }
-  addChipEl(state.golvvarme === "Ja", "Golvvärme");
-  addChipEl(state.handdukstork === "Ja", "Handdukstork");
-
-  // Price box
-  const priceMain = document.getElementById("price-main");
-  const priceSub = document.getElementById("price-sub");
-  const priceRow = document.getElementById("price-pill-row");
-  priceRow.innerHTML = "";
-
-  if (state.price && state.price.pris_totalt_ink_moms) {
-    priceMain.textContent = formatKr(state.price.pris_totalt_ink_moms);
-
-    priceSub.textContent =
-      "Preliminär total inkl. moms. Exakt pris efter platsbesök.";
-
-    function addPricePill(label, value) {
-      const pill = document.createElement("span");
-      pill.className = "price-pill";
-      pill.textContent = `${label}: ${formatKr(value)}`;
-      priceRow.appendChild(pill);
-    }
-
-    addPricePill("Arbete", state.price.pris_arbete_ex_moms);
-    addPricePill("Material", state.price.pris_grundmaterial_ex_moms);
-    addPricePill("Resa & sophantering", state.price.pris_resekostnad_ex_moms);
-  } else {
-    priceMain.textContent = "–";
-    priceSub.textContent =
-      "Arbete, material m.m. visas efter beräkning.";
-  }
+      <div class="summary-block">
+        <h3>Kostnadsuppdelning</h3>
+        ${
+          p && p.ok
+            ? `
+              <div class="summary-price-box">
+                <div class="label">Preliminärt totalpris</div>
+                <div class="value">${formatKr(p.pris_totalt_ink_moms)}</div>
+              </div>
+              <small class="muted">
+                Arbete, material m.m. uppdelas i den skarpa offerten.
+              </small>
+            `
+            : `<small class="muted">
+                Arbete, material m.m. visas efter beräkning.
+              </small>`
+        }
+      </div>
+    </aside>
+  `;
 }
 
-function formatKr(num) {
-  if (num === undefined || num === null || num === "" || isNaN(num)) {
-    return "–";
-  }
-  const n = Number(num);
-  return n.toLocaleString("sv-SE", {
-    style: "currency",
-    currency: "SEK",
-    maximumFractionDigits: 0
+// ---------- WIRING EVENTS ----------
+
+function wireEvents() {
+  const root = getRoot();
+  if (!root) return;
+
+  // Text / number / select inputs
+  root.querySelectorAll("input[data-field], select[data-field]").forEach((el) => {
+    el.addEventListener("input", (e) => {
+      const field = e.target.dataset.field;
+      let value = e.target.value;
+
+      if (e.target.type === "number" || e.target.type === "range") {
+        value = value === "" ? "" : Number(value);
+      }
+
+      setState({ [field]: value });
+    });
   });
+
+  // Pills
+  root.querySelectorAll("[data-pill]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const field = btn.dataset.field;
+      const value = btn.dataset.value;
+      setState({ [field]: value });
+    });
+  });
+
+  // Subtabs on step 3
+  root.querySelectorAll("[data-substep]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      setState({ subStep3: btn.dataset.substep });
+    });
+  });
+
+  const gotoVvs = root.querySelector("[data-goto-vvs]");
+  if (gotoVvs) {
+    gotoVvs.addEventListener("click", () => {
+      setState({ subStep3: "vvsEl" });
+    });
+  }
+
+  const nextBtn = root.querySelector("[data-next]");
+  if (nextBtn) nextBtn.addEventListener("click", handleNext);
+
+  const prevBtn = root.querySelector("[data-prev]");
+  if (prevBtn) prevBtn.addEventListener("click", handlePrev);
+
+  const calcBtn = root.querySelector("[data-calc]");
+  if (calcBtn) calcBtn.addEventListener("click", handleCalculate);
 }
 
-// ---------- CALL BACKEND ----------
-async function calculatePrice() {
+function handleNext() {
+  if (state.step < 4) {
+    setState({ step: state.step + 1 });
+  }
+}
+
+function handlePrev() {
+  if (state.step > 1) {
+    setState({ step: state.step - 1 });
+  }
+}
+
+async function handleCalculate() {
   try {
-    const body = {
+    setState({ loading: true, error: "" });
+
+    const payload = {
       postnummer: state.postnummer,
-      zon: Number(state.zon || 1),
-      kvm_golv: Number(state.kvm_golv || 0),
-      kvm_vagg: Number(state.kvm_vagg || 0),
-      takhojd: Number(state.takhojd || 2.4),
+      zon: Number(state.zon) || 0,
+      kvm_golv: Number(state.kvm_golv) || 0,
+      kvm_vagg: Number(state.kvm_vagg) || 0,
+      takhojd: Number(state.takhojd) || 0,
 
       microcement_golv: state.microcement_golv,
       microcement_vagg: state.microcement_vagg,
@@ -336,74 +662,80 @@ async function calculatePrice() {
       bankskiva_ovan_tm_tt: state.bankskiva_ovan_tm_tt,
       vaggskap: state.vaggskap,
       nytt_innertak: state.nytt_innertak,
-      rivning_vaggar: state.rivning_vaggar,
+      rivning_vaggar: Number(state.rivning_vaggar) || 0,
       nya_vaggar_material: state.nya_vaggar_material,
-      gerade_horn_meter: state.gerade_horn_meter,
-      fyll_i_antal_meter: Number(state.fyll_i_antal_meter || 0),
+      gerade_horn_meter: Number(state.gerade_horn_meter) || 0,
+      fyll_i_antal_meter: Number(state.fyll_i_antal_meter) || 0,
 
       dolda_ror: state.dolda_ror,
       wc: state.wc,
+      byte_av_avloppsgroda: state.byte_av_avloppsgroda,
+      ny_slitsbotten: state.ny_slitsbotten,
+      brunn: state.brunn,
       duschblandare: state.duschblandare,
+      tvattstallsblandare: state.tvattstallsblandare,
+      tvattstall_kommod: state.tvattstall_kommod,
       tvattmaskin: state.tvattmaskin,
       torktumlare: state.torktumlare,
       torkskap: state.torkskap,
+      inklakat_badkar: state.inklakat_badkar,
+      varme_vp: state.varme_vp,
 
       takbelysning: state.takbelysning,
-      spotlight_antal: Number(state.spotlight_antal || 0),
-      golvvarme: state.golvvarme,
+      spotlight_antal: Number(state.spotlight_antal) || 0,
+      golvvärme: state.golvvärme,
       handdukstork: state.handdukstork
     };
 
-    const priceSub = document.getElementById("price-sub");
-    priceSub.textContent = "Beräknar pris…";
-
-    const res = await fetch("/api/estimate/badrum", {
+    const res = await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
+      body: JSON.stringify(payload)
     });
 
     const data = await res.json();
+
     if (!data.ok) {
-      console.error("Estimate error:", data.error);
-      priceSub.textContent =
-        "Kunde inte beräkna pris just nu. Försök igen eller kontakta Jobryan.";
-      state.price = null;
-    } else {
-      state.price = data;
+      throw new Error(data.error || "Beräkningen misslyckades");
     }
+
+    setState({ loading: false, priceResult: data });
   } catch (err) {
     console.error(err);
-    document.getElementById("price-sub").textContent =
-      "Tekniskt fel vid beräkning.";
-    state.price = null;
+    setState({
+      loading: false,
+      error: err.message || "Något gick fel vid beräkningen"
+    });
   }
-
-  renderSummary();
 }
 
-// ---------- CONTACT SEND (just console for now) ----------
-function initSendOfferButton() {
-  const btn = document.getElementById("send-offer-btn");
-  if (!btn) return;
+// ---------- SMALL UTILS ----------
 
-  btn.addEventListener("click", () => {
-    // Here you can later POST to your own email-service / CRM.
-    console.log("OFFERT DATA TO SEND:", state);
-    btn.textContent = "Skickad!";
-    btn.disabled = true;
-    setTimeout(() => {
-      btn.textContent = "Skicka offert";
-      btn.disabled = false;
-    }, 2500);
-  });
+function selectOptions(list, selected) {
+  return list
+    .map(
+      (v) =>
+        `<option value="${escapeHtml(v)}" ${
+          v === selected ? "selected" : ""
+        }>${escapeHtml(v)}</option>`
+    )
+    .join("");
+}
+
+function formatKr(value) {
+  if (value == null || value === "" || isNaN(Number(value))) return "–";
+  const n = Math.round(Number(value));
+  return n.toLocaleString("sv-SE") + " kr";
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 // ---------- INIT ----------
-document.addEventListener("DOMContentLoaded", () => {
-  bindInputs();
-  convertSelectsToPills();
-  initSteps();
-  initSendOfferButton();
-  renderSummary();
-});
+
+document.addEventListener("DOMContentLoaded", render);
