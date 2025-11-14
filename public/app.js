@@ -1,127 +1,92 @@
-// ========== Jobryan – Offert & prisberäkning frontend ==========
+// ======== FRONTEND – BADRUM OFFERT ========
 
-function getField(name) {
-  const el = document.querySelector(`[name="${name}"]`);
-  if (!el) return undefined;
+// 1) Get reference to the form + button + result area
+const badrumForm   = document.querySelector('#badrum-form');
+const calcButton   = document.querySelector('#calc-badrum-btn');
+const resultBox    = document.querySelector('#badrum-result');
 
-  if (el.tagName === "SELECT") {
-    return el.value || undefined;
-  }
-
-  if (el.type === "number") {
-    if (!el.value) return undefined;
-    return Number(el.value);
-  }
-
-  return el.value || undefined;
+if (calcButton && badrumForm && resultBox) {
+  calcButton.addEventListener('click', (e) => {
+    e.preventDefault();
+    calculateBadrumPrice();
+  });
 }
 
-function collectBadrumPayload() {
+// 2) Helper: read all inputs from the form and build the payload
+function buildBadrumPayload() {
+  const form = badrumForm;
+  const get = (name) => form.elements[name]?.value ?? '';
+
   return {
-    postnummer: getField("postnummer"),
-    zon: getField("zon"),
-    kvm_golv: getField("kvm_golv"),
-    kvm_vagg: getField("kvm_vagg"),
-    takhojd: getField("takhojd"),
-    microcement_golv: getField("microcement_golv"),
-    microcement_vagg: getField("microcement_vagg"),
-    ny_troskel: getField("ny_troskel"),
-    byta_dorrblad: getField("byta_dorrblad"),
-    byta_karm_dorr: getField("byta_karm_dorr"),
-    slipning_dorr: getField("slipning_dorr"),
-    bankskiva_ovan_tm_tt: getField("bankskiva_ovan_tm_tt"),
-    vaggskap: getField("vaggskap"),
-    nytt_innertak: getField("nytt_innertak"),
-    rivning_vaggar: getField("rivning_vaggar"),
-    nya_vaggar_material: getField("nya_vaggar_material"),
-    gerade_horn_meter: getField("gerade_horn_meter"),
-    fyll_i_antal_meter: getField("fyll_i_antal_meter"),
-    dolda_ror: getField("dolda_ror")
+    postnummer:          get('postnummer'),
+    zon:                 Number(get('zon')) || '',
+    kvm_golv:            Number(get('kvm_golv')) || '',
+    kvm_vagg:            Number(get('kvm_vagg')) || '',
+    takhojd:             Number(get('takhojd')) || '',
+
+    microcement_golv:    get('microcement_golv'),
+    microcement_vagg:    get('microcement_vagg'),
+    ny_troskel:          get('ny_troskel'),
+    byta_dorrblad:       get('byta_dorrblad'),
+    byta_karm_dorr:      get('byta_karm_dorr'),
+    slipning_dorr:       get('slipning_dorr'),
+    bankskiva_ovan_tm_tt:get('bankskiva_ovan_tm_tt'),
+    vaggskap:            get('vaggskap'),
+
+    nytt_innertak:       get('nytt_innertak'),
+    rivning_vaggar:      get('rivning_vaggar'),
+    nya_vaggar_material: get('nya_vaggar_material'),
+    gerade_horn_meter:   get('gerade_horn_meter'),
+    fyll_i_antal_meter:  get('fyll_i_antal_meter'),
+    dolda_ror:           get('dolda_ror')
   };
 }
 
-function updatePriceSummary(result) {
-  const box = document.getElementById("price-summary-content");
-
-  if (!result) {
-    box.innerHTML = `<div class="error-text">Tekniskt fel – inget svar.</div>`;
-    return;
-  }
-
-  if (result.ok === false) {
-    box.innerHTML = `<div class="error-text">Fel i kalkylen: ${result.error}</div>`;
-    return;
-  }
-
-  const arbete = result.pris_arbete_ex_moms ?? "-";
-  const extra = result.pris_extra_arbete_ex_moms ?? "-";
-  const material = result.pris_material_ex_moms ?? "-";
-  const total = result.pris_totalt_ink_moms ?? "-";
-
-  box.innerHTML = `
-    <div class="summary-grid">
-      <div>
-        <div class="summary-label">Arbete exkl. moms</div>
-        <div class="summary-value">${arbete}</div>
-      </div>
-      <div>
-        <div class="summary-label">Extra arbete exkl. moms</div>
-        <div class="summary-value">${extra}</div>
-      </div>
-      <div>
-        <div class="summary-label">Material exkl. moms</div>
-        <div class="summary-value">${material}</div>
-      </div>
-      <div>
-        <div class="summary-label">Totalt inkl. moms</div>
-        <div class="summary-value">${total}</div>
-      </div>
-    </div>
-    <div class="summary-note">
-      Detta är en preliminär prisbild baserad på era uppgifter.
-      Slutlig offert skickas efter genomgång av projektet.
-    </div>
-  `;
-}
-
-async function calculateBadrumEstimate() {
-  const btn = document.getElementById("calc-price-btn");
-  const box = document.getElementById("price-summary-content");
-
-  const payload = collectBadrumPayload();
-
-  if (!payload.postnummer) {
-    box.innerHTML = `<div class="error-text">Fyll i postnummer.</div>`;
-    return;
-  }
-
+// 3) Call the backend
+async function calculateBadrumPrice() {
   try {
-    btn.disabled = true;
-    btn.textContent = "Beräknar...";
+    resultBox.textContent = 'Beräknar pris...';
 
-    box.innerHTML = `<span style="color:#555;">Beräknar pris...</span>`;
+    const payload = buildBadrumPayload();
 
-    const res = await fetch("/api/estimate/badrum", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+    const res = await fetch('/api/estimate/badrum', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
 
     const data = await res.json();
-    console.log("RESULT:", data);
+    console.log('[offert] RESULT:', data);
 
-    updatePriceSummary(data);
+    if (!data.ok) {
+      resultBox.textContent = 'Fel vid beräkning: ' + (data.error || 'okänt fel');
+      return;
+    }
+
+    renderBadrumResult(data);
 
   } catch (err) {
     console.error(err);
-    box.innerHTML = `<div class="error-text">Tekniskt fel.</div>`;
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "Beräkna pris för badrum";
+    resultBox.textContent = 'Tekniskt fel. Försök igen.';
   }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("calc-price-btn")
-    .addEventListener("click", calculateBadrumEstimate);
-});
+// 4) Show the prices in the UI
+function renderBadrumResult(data) {
+  const fmt = (x) =>
+    typeof x === 'number'
+      ? x.toLocaleString('sv-SE', { maximumFractionDigits: 0 }) + ' kr'
+      : x;
+
+  resultBox.innerHTML = `
+    <h3>Sammanfattning – Badrum</h3>
+    <p><strong>Arbetskostnad exkl. moms:</strong> ${fmt(data.pris_arbete_ex_moms)}</p>
+    <p><strong>Material exkl. moms:</strong> ${fmt(data.pris_grundmaterial_ex_moms)}</p>
+    <p><strong>Resekostnad exkl. moms:</strong> ${fmt(data.pris_resekostnad_ex_moms)}</p>
+    <p><strong>Sophantering exkl. moms:</strong> ${fmt(data.pris_sophantering_ex_moms)}</p>
+    <hr>
+    <p><strong>Totalt exkl. moms:</strong> ${fmt(data.totalt_ex_moms)}</p>
+    <p><strong>ROT-avdrag:</strong> ${fmt(data.rot)}</p>
+    <p><strong>Pris efter ROT:</strong> ${fmt(data.pris_efter_rot)}</p>
+  `;
+}
