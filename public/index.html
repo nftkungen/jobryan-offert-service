@@ -2,79 +2,30 @@
 <html lang="sv">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Badrumsberäkning</title>
-
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f6f6f6;
-      margin: 0;
-      padding: 20px;
-      display: flex;
-      justify-content: center;
-    }
-
-    #app {
-      width: 100%;
-      max-width: 480px;
-      background: white;
-      padding: 25px;
-      border-radius: 10px;
-      box-shadow: 0 3px 12px rgba(0,0,0,0.1);
-    }
-
-    .step-title {
-      font-size: 22px;
-      font-weight: bold;
-      margin-bottom: 10px;
-    }
-
-    .input-group {
-      margin-bottom: 18px;
-    }
-
-    label {
-      display: block;
-      font-size: 14px;
-      margin-bottom: 4px;
-    }
-
-    input, select {
-      width: 100%;
-      padding: 10px;
-      font-size: 15px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-    }
-
-    button {
-      width: 100%;
-      background: #ff6200;
-      border: none;
-      padding: 14px;
-      margin-top: 15px;
-      color: white;
-      font-size: 17px;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background: #e05800;
-    }
-
-    .summary-box {
-      padding: 15px;
-      background: #efefef;
-      border-radius: 6px;
-      margin-bottom: 20px;
-    }
-  </style>
+  <title>Jobryan Badrumsberäkning</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
-
 <body>
-  <div id="app"></div>
-  <script src="app.js"></script>
+
+<div id="wizard-container">
+
+  <!-- STEP HEADER -->
+  <div id="wizard-header">
+    <h2 id="step-title">Fastighetsinformation</h2>
+    <div id="step-progress">Steg 1 av 5</div>
+  </div>
+
+  <!-- STEP CONTENT HOLDER -->
+  <div id="wizard-step"></div>
+
+  <!-- STEP NAVIGATION -->
+  <div id="wizard-nav">
+    <button id="prev-btn" class="nav-btn hidden">Tillbaka</button>
+    <button id="next-btn" class="nav-btn">Nästa</button>
+  </div>
+
+</div>
+
+<script src="app.js"></script>
 </body>
 </html>
