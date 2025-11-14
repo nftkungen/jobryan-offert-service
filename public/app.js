@@ -798,10 +798,62 @@ async function handleCalculate() {
   try {
     setState({ loading: true, error: "" });
 
-    const payload = { ...initialState, ...state }; // Send all state
-    delete payload.loading;
-    delete payload.error;
-    delete payload.priceResult;
+    // **FIX:** Build a clean payload with *only* the form fields
+    // This is what the Google Sheet endpoint expects.
+    const payload = {
+      // Step 1
+      kund_namn: state.kund_namn,
+      kund_tel: state.kund_tel,
+      kund_email: state.kund_email,
+      address: state.address,
+      propertyType: state.propertyType,
+      era: state.era,
+      floor: state.floor,
+      elevator: state.elevator,
+      // Step 2
+      postnummer: state.postnummer,
+      zon: Number(state.zon) || 0,
+      kvm_golv: Number(state.kvm_golv) || 0,
+      kvm_vagg: Number(state.kvm_vagg) || 0,
+      takhojd: Number(state.takhojd) || 0,
+      // Step 3
+      microcement_golv: state.microcement_golv,
+      microcement_vagg: state.microcement_vagg,
+      gerade_horn_meter: Number(state.gerade_horn_meter) || 0,
+      fyll_i_antal_meter: Number(state.fyll_i_antal_meter) || 0,
+      // Step 4
+      ny_troskel: state.ny_troskel,
+      byta_dorrblad: state.byta_dorrblad,
+      byta_karm_dorr: state.byta_karm_dorr,
+      slipning_dorr: state.slipning_dorr,
+      // Step 5
+      bankskiva_ovan_tm_tt: state.bankskiva_ovan_tm_tt,
+      vaggskap: state.vaggskap,
+      nytt_innertak: state.nytt_innertak,
+      // Step 6
+      rivning_vaggar: Number(state.rivning_vaggar) || 0,
+      nya_vaggar_material: state.nya_vaggar_material,
+      // Step 7
+      dolda_ror: state.dolda_ror,
+      wc: state.wc,
+      byte_av_avloppsgroda: state.byte_av_avloppsgroda,
+      ny_slitsbotten: state.ny_slitsbotten,
+      brunn: state.brunn,
+      duschblandare: state.duschblandare,
+      tvattstallsblandare: state.tvattstallsblandare,
+      tvattstall_kommod: state.tvattstall_kommod,
+      inklakat_badkar: state.inklakat_badkar,
+      // Step 8
+      tvattmaskin: state.tvattmaskin,
+      torktumlare: state.torktumlare,
+      torkskap: state.torkskap,
+      varme_vp: state.varme_vp,
+      golvvärme: state.golvvärme,
+      handdukstork: state.handdukstork,
+      // Step 9
+      takbelysning: state.takbelysning,
+      spotlight_antal: Number(state.spotlight_antal) || 0,
+    };
 
     const res = await fetch(API_URL, {
       method: "POST",
