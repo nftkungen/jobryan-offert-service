@@ -1,195 +1,318 @@
-// =======================
-// DOM helper (FIXED)
-// =======================
-function el(tag, attrs = {}, ...children) {
-  if (attrs === null || typeof attrs !== "object" || Array.isArray(attrs)) {
-    children.unshift(attrs);
-    attrs = {};
-  }
-
-  const node = document.createElement(tag);
-
-  Object.entries(attrs).forEach(([k, v]) => {
-    if (k === "class") node.className = v;
-    else if (k === "for") node.htmlFor = v;
-    else if (k.startsWith("on")) node.addEventListener(k.substring(2).toLowerCase(), v);
-    else node.setAttribute(k, v);
-  });
-
-  children.flat().forEach(ch => {
-    if (ch === null || ch === undefined) return;
-    node.appendChild(typeof ch === "string" ? document.createTextNode(ch) : ch);
-  });
-
-  return node;
-}
-
-// ========================================
-// Multi-step wizard system
-// ========================================
+/* -----------------------------
+   JOBRYAN STEP WIZARD (A FLOW)
+-------------------------------- */
 
 let currentStep = 0;
 
-// ⭐ All fields the user will fill in
+// ALL FORM DATA STORED HERE
 let formData = {
-  postnummer: "",
-  zon: "",
-  kvm_golv: "",
-  kvm_vagg: "",
-  takhojd: "",
-  microcement_golv: "Nej",
-  microcement_vagg: "Nej",
-  ny_troskel: "Nej",
-  byta_dorrblad: "Nej",
-  byta_karm_dorr: "Nej",
-  slipning_dorr: "Nej",
-  bankskiva_ovan_tm_tt: "Nej",
-  vaggskap: "Nej",
-  nytt_innertak: "Nej",
-  rivning_vaggar: 0,
-  nya_vaggar_material: "Nej",
-  gerade_horn_meter: 0,
-  fyll_i_antal_meter: 0,
-  dolda_ror: "Nej",
-
-  // Contact details
-  kund_namn: "",
-  kund_telefon: "",
-  kund_adress: ""
+  address: "",
+  property_type: "",
+  era: "",
+  floor: "",
+  elevator: "",
+  kvm: "",
+  floor_surface: "",
+  floor_tile_size: "",
+  wall_surface: "",
+  wall_tile_size: "",
+  dolda_ror: "",
+  nytt_innertak: "",
+  rivning_vaggar: "",
+  name: "",
+  phone: "",
+  email: ""
 };
 
-// Steps configured here
+// ----- STEP DEFINITIONS -----
+
 const steps = [
-  // STEP 0 — Basic info
-  () => el("div", null,
-    el("div", { class: "step-title" }, "Grunduppgifter"),
-    textInput("Postnummer", "postnummer"),
-    selectInput("Zon", "zon", ["1","2","3","4"]),
-    textInput("Kvm golv", "kvm_golv"),
-    textInput("Kvm vägg", "kvm_vagg"),
-    textInput("Takhöjd", "takhöjd"),
-    nextBtn()
-  ),
+  {
+    title: "Fastighetsinformation",
+    render: () => `
+      <div class="step-block">
+        <label>Adress</label>
+        <input type="text" id="address" placeholder="Ex: Slätbaksvägen 17" value="${formData.address}">
+      </div>
 
-  // STEP 1 — Execution
-  () => el("div", null,
-    el("div", { class: "step-title" }, "Utförande"),
-    selectInput("Microcement golv", "microcement_golv", ["Ja","Nej"]),
-    selectInput("Microcement vägg", "microcement_vagg", ["Ja","Nej"]),
-    selectInput("Ny tröskel", "ny_troskel", ["Ja","Nej"]),
-    selectInput("Byta dörrblad", "byta_dorrblad", ["Ja","Nej"]),
-    selectInput("Byta karm + dörr", "byta_karm_dorr", ["Ja","Nej"]),
-    selectInput("Slipning dörr", "slipning_dorr", ["Ja","Nej"]),
-    selectInput("Bänkskiva ovan TM/TT", "bankskiva_ovan_tm_tt", ["Ja","Nej"]),
-    selectInput("Väggskåp", "vaggskap", ["Ja","Nej"]),
-    selectInput("Nytt innertak", "nytt_innertak", ["Ja","Nej"]),
-    textInput("Rivning av väggar (antal)", "rivning_vaggar"),
-    selectInput("Nya väggar (material)", "nya_vaggar_material", ["Ja","Nej"]),
-    textInput("Gerade hörn (meter)", "gerade_horn_meter"),
-    textInput("Fyll i antal meter", "fyll_i_antal_meter"),
-    selectInput("Dolda rör", "dolda_ror", ["Ja","Nej"]),
-    backBtn(),
-    nextBtn()
-  ),
+      <div class="step-block">
+        <label>Fastighetstyp</label>
+        <div id="option-buttons">
+          ${optionButton("property_type","Villa")}
+          ${optionButton("property_type","Lägenhet")}
+          ${optionButton("property_type","Radhus")}
+        </div>
+      </div>
 
-  // STEP 2 — Contact info
-  () => el("div", null,
-    el("div", { class: "step-title" }, "Kontaktuppgifter"),
-    textInput("Fullständigt namn", "kund_namn"),
-    textInput("Telefonnummer", "kund_telefon"),
-    textInput("Adress", "kund_adress"),
-    backBtn(),
-    nextBtn("Visa sammanfattning")
-  ),
+      <div class="step-block">
+        <label>Era</label>
+        <div id="option-buttons">
+          ${optionButton("era","20-tal")}
+          ${optionButton("era","30-tal")}
+          ${optionButton("era","40-tal")}
+          ${optionButton("era","50-tal")}
+          ${optionButton("era","60-tal")}
+          ${optionButton("era","70-tal")}
+          ${optionButton("era","80-tal")}
+          ${optionButton("era","90-tal")}
+        </div>
+      </div>
 
-  // STEP 3 — Summary + API call
-  () => summaryScreen()
+      <div class="step-block">
+        <label>Våningsplan</label>
+        <div id="option-buttons">
+          ${optionButton("floor","BV")}
+          ${optionButton("floor","1tr")}
+          ${optionButton("floor","2tr")}
+          ${optionButton("floor","3tr")}
+          ${optionButton("floor","4tr")}
+        </div>
+      </div>
+
+      <div class="step-block">
+        <label>Hiss</label>
+        <div id="option-buttons">
+          ${optionButton("elevator","Stor")}
+          ${optionButton("elevator","Liten")}
+          ${optionButton("elevator","Ingen")}
+        </div>
+      </div>
+    `
+  },
+
+  {
+    title: "Badrum – Golv",
+    render: () => `
+      <div class="step-block">
+        <label>Storlek (kvm)</label>
+        <input type="number" id="kvm" value="${formData.kvm}" placeholder="Ex: 3.5">
+      </div>
+
+      <div class="step-block">
+        <label>Ytskikt golv</label>
+        <div id="option-buttons">
+          ${optionButton("floor_surface","Plattor")}
+          ${optionButton("floor_surface","Våtrumsmatta")}
+          ${optionButton("floor_surface","Microcement","orange")}
+        </div>
+      </div>
+
+      <div class="step-block">
+        <label>Plattstorlek</label>
+        <div id="option-buttons">
+          ${optionButton("floor_tile_size","<60x60")}
+          ${optionButton("floor_tile_size",">60x60")}
+        </div>
+      </div>
+    `
+  },
+
+  {
+    title: "Badrum – Väggar",
+    render: () => `
+      <div class="step-block">
+        <label>Ytskikt väggar</label>
+        <div id="option-buttons">
+          ${optionButton("wall_surface","Plattor")}
+          ${optionButton("wall_surface","Våtrumsmatta")}
+          ${optionButton("wall_surface","Microcement","orange")}
+        </div>
+      </div>
+
+      <div class="step-block">
+        <label>Plattstorlek vägg</label>
+        <div id="option-buttons">
+          ${optionButton("wall_tile_size","<60x60")}
+          ${optionButton("wall_tile_size",">60x60")}
+        </div>
+      </div>
+    `
+  },
+
+  {
+    title: "Extra val",
+    render: () => `
+      <div class="step-block">
+        <label>Dolda rör</label>
+        <div id="option-buttons">
+          ${optionButton("dolda_ror","Ja")}
+          ${optionButton("dolda_ror","Nej")}
+        </div>
+      </div>
+
+      <div class="step-block">
+        <label>Nytt innertak</label>
+        <div id="option-buttons">
+          ${optionButton("nytt_innertak","Ja")}
+          ${optionButton("nytt_innertak","Nej")}
+        </div>
+      </div>
+
+      <div class="step-block">
+        <label>Rivning av väggar</label>
+        <input type="number" id="rivning_vaggar" value="${formData.rivning_vaggar}" placeholder="Antal väggar">
+      </div>
+    `
+  },
+
+  {
+    title: "Dina uppgifter",
+    render: () => `
+      <div class="step-block">
+        <label>Namn</label>
+        <input type="text" id="name" value="${formData.name}">
+      </div>
+
+      <div class="step-block">
+        <label>Telefonnummer</label>
+        <input type="text" id="phone" value="${formData.phone}">
+      </div>
+
+      <div class="step-block">
+        <label>Email</label>
+        <input type="email" id="email" value="${formData.email}">
+      </div>
+
+      <div id="summary-box">
+        <strong>Sammanfattning kommer på nästa sida</strong>
+      </div>
+    `
+  }
 ];
 
-// ========================================
-// Form helpers
-// ========================================
+// ----------------------------------
+// Option Button Generator
+// ----------------------------------
+function optionButton(field, value, color = "green") {
+  let selected = formData[field] === value;
+  let cls = selected
+    ? (color === "orange" ? "selected-orange" : "selected-green")
+    : "";
 
-function textInput(labelText, field) {
-  return el("div", { class: "input-group" },
-    el("label", null, labelText),
-    el("input", {
-      value: formData[field],
-      oninput: e => formData[field] = e.target.value
-    })
-  );
+  return `<div class="option-btn ${cls}" onclick="selectOption('${field}','${value}','${color}')">${value}</div>`;
 }
 
-function selectInput(labelText, field, options) {
-  return el("div", { class: "input-group" },
-    el("label", null, labelText),
-    el("select", {
-      oninput: e => formData[field] = e.target.value
-    },
-      ...options.map(o =>
-        el("option", { value: o, selected: formData[field] === o }, o)
-      )
-    )
-  );
+// Handle option selection
+window.selectOption = function(field, value, color) {
+  formData[field] = value;
+  renderStep(); // re-render to update selection color
+};
+
+// ----------------------------------
+// Render a step
+// ----------------------------------
+function renderStep() {
+  document.getElementById("wizard-step").innerHTML = steps[currentStep].render();
+  document.getElementById("step-title").innerText = steps[currentStep].title;
+  document.getElementById("step-progress").innerText =
+    `Steg ${currentStep+1} av ${steps.length}`;
+  
+  document.getElementById("prev-btn").classList.toggle("hidden", currentStep === 0);
+
+  document.getElementById("next-btn").innerText =
+    currentStep === steps.length - 1 ? "Visa resultat" : "Nästa";
 }
 
-function nextBtn(txt = "Nästa") {
-  return el("button", { onclick: () => goStep(currentStep + 1) }, txt);
-}
-
-function backBtn() {
-  return el("button", { onclick: () => goStep(currentStep - 1) }, "Tillbaka");
-}
-
-// ========================================
-// Summary + API
-// ========================================
-
-function summaryScreen() {
-  return el("div", null,
-    el("div", { class: "step-title" }, "Sammanfattning"),
-    el("div", { class: "summary-box" },
-      ...Object.entries(formData).map(([key, val]) =>
-        el("div", null, `${key}: ${val}`)
-      )
-    ),
-    backBtn(),
-    el("button", { onclick: sendToAPI }, "Beräkna pris")
-  );
-}
-
-async function sendToAPI() {
-  const r = await fetch("/api/estimate/badrum", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(formData)
+// ----------------------------------
+// Validate + Save inputs every step
+// ----------------------------------
+function saveInputs() {
+  // Generic read of inputs that exist on current step
+  const ids = ["address","kvm","rivning_vaggar","name","phone","email"];
+  ids.forEach(id => {
+    let el = document.getElementById(id);
+    if (el) formData[id] = el.value;
   });
-
-  const data = await r.json();
-
-  document.getElementById("app").innerHTML = "";
-  document.getElementById("app").appendChild(
-    el("div", null,
-      el("h2", null, "Ditt preliminära pris"),
-      el("pre", null, JSON.stringify(data, null, 2)),
-      el("p", null, "Jobryan kontaktar dig inom kort.")
-    )
-  );
 }
 
-// ========================================
-// Render function
-// ========================================
+// ----------------------------------
+// Go NEXT
+// ----------------------------------
+document.getElementById("next-btn").onclick = () => {
+  saveInputs();
 
-function goStep(n) {
-  currentStep = Math.max(0, Math.min(steps.length - 1, n));
-  render();
+  if (currentStep < steps.length - 1) {
+    currentStep++;
+    renderStep();
+  } else {
+    showSummaryScreen();
+  }
+};
+
+// ----------------------------------
+// Go BACK
+// ----------------------------------
+document.getElementById("prev-btn").onclick = () => {
+  saveInputs();
+  currentStep--;
+  renderStep();
+};
+
+// ----------------------------------
+// SUMMARY + PRICE FETCH
+// ----------------------------------
+function showSummaryScreen() {
+  document.getElementById("wizard-step").innerHTML = `
+    <h3>Ditt preliminära pris</h3>
+    <div id="summary-box">Hämtar pris...</div>
+  `;
+
+  // CALL YOUR BACKEND
+  fetch("/api/estimate/badrum", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({
+      postnummer: "12051",
+      zon: 3,
+      kvm_golv: formData.kvm,
+      kvm_vagg: formData.kvm * 2.78,
+      takhojd: 2.6,
+
+      microcement_golv: formData.floor_surface === "Microcement" ? "Ja" : "Nej",
+      microcement_vagg: formData.wall_surface === "Microcement" ? "Ja" : "Nej",
+      ny_troskel: "Nej",
+
+      byta_dorrblad: "Nej",
+      byta_karm_dorr: "Nej",
+      slipning_dorr: "Nej",
+      bankskiva_ovan_tm_tt: "Nej",
+      vaggskap: "Nej",
+
+      nytt_innertak: formData.nytt_innertak,
+      rivning_vaggar: formData.rivning_vaggar,
+      nya_vaggar_material: "Nej",
+
+      gerade_horn_meter: 0,
+      fyll_i_antal_meter: 0,
+
+      dolda_ror: formData.dolda_ror
+    })
+  })
+  .then(r => r.json())
+  .then(data => {
+    document.getElementById("summary-box").innerHTML = `
+      <p><strong>Arbete ex moms:</strong> ${data.pris_arbete_ex_moms} kr</p>
+      <p><strong>Material ex moms:</strong> ${data.pris_grundmaterial_ex_moms} kr</p>
+      <p><strong>Resekostnad:</strong> ${data.pris_resekostnad_ex_moms} kr</p>
+      <p><strong>Sophantering:</strong> ${data.pris_sophantering_ex_moms} kr</p>
+      <hr>
+      <p><strong>Totalt preliminärt pris:</strong> ${data.pris_totalt_ink_moms} kr</p>
+      <hr>
+      <button id="send-offert-btn" class="nav-btn">Skicka offert</button>
+    `;
+
+    document.getElementById("send-offert-btn").onclick = sendOffert;
+  });
 }
 
-function render() {
-  const root = document.getElementById("app");
-  root.innerHTML = "";
-  root.appendChild(steps[currentStep]());
+// ----------------------------------
+// SEND OFFER EMAIL
+// ----------------------------------
+function sendOffert() {
+  alert("Offert skickad! (backend to implement)");
 }
 
-render();
+// ----------------------------------
+// INITIAL RENDER
+// ----------------------------------
+renderStep();
