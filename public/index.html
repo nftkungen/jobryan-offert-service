@@ -261,8 +261,6 @@
       font-size: 12px;
     }
 
-    /* summary */
-
     .summary-header {
       display: flex;
       justify-content: space-between;
@@ -509,14 +507,15 @@
           </div>
         </section>
 
-        <!-- STEP 3 – Snickeri + VVS + El (korta versionen) -->
+        <!-- STEP 3 – Snickeri + VVS + El -->
         <section class="step" data-step="3">
           <h3 class="step-title">3. Utförande – ytskikt & installationer</h3>
           <p class="muted" style="margin-bottom: 10px">
-            Vi börjar med några val som påverkar priset mest. (Resten kan du ta
-            med säljaren vid hembesöket.)
+            Vi börjar med val som påverkar priset mest. (Resten kan du alltid
+            justera med säljaren.)
           </p>
 
+          <!-- Snickeri -->
           <h4 style="font-size: 13px; margin: 6px 0 6px">Ytskikt & snickeri</h4>
           <div class="field-grid">
             <div class="field">
@@ -604,7 +603,10 @@
 
             <div class="field">
               <label for="nya_vaggar_material">Nya väggar (material)</label>
-              <select id="nya_vaggar_material" name="nya_vaggar_material">
+              <select
+                id="nya_vaggar_material"
+                name="nya_vaggar_material"
+              >
                 <option value="Nej">Nej / bestäms senare</option>
                 <option value="Regelvägg">Regelvägg</option>
                 <option value="Lättbetong">Lättbetong</option>
@@ -636,7 +638,8 @@
             </div>
           </div>
 
-          <h4 style="font-size: 13px; margin: 14px 0 6px">VVS – kortversion</h4>
+          <!-- VVS -->
+          <h4 style="font-size: 13px; margin: 14px 0 6px">VVS</h4>
           <div class="field-grid">
             <div class="field">
               <label for="dolda_ror">Dolda rör (enbart arbete)</label>
@@ -656,10 +659,54 @@
             </div>
 
             <div class="field">
+              <label for="byte_avloppsgroda">Byte av avloppsgroda</label>
+              <select id="byte_avloppsgroda" name="byte_avloppsgroda">
+                <option value="Nej">Nej</option>
+                <option value="Ja">Ja</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="ny_slutsbotten">Ny slutsbotten</label>
+              <select id="ny_slutsbotten" name="ny_slutsbotten">
+                <option value="Nej">Nej</option>
+                <option value="Ja">Ja</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="brunn">Brunn</label>
+              <select id="brunn" name="brunn">
+                <option value="Standard">Standard</option>
+              </select>
+            </div>
+
+            <div class="field">
               <label for="duschblandare">Duschblandare</label>
               <select id="duschblandare" name="duschblandare">
                 <option value="Standard">Standard</option>
                 <option value="Inbyggnadsdusch">Inbyggnadsdusch</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="tvattstallsblandare">Tvättställsblandare</label>
+              <select
+                id="tvattstallsblandare"
+                name="tvattstallsblandare"
+              >
+                <option value="Standard">Standard</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="tvattstall_kommod">Tvättställ / kommod</label>
+              <select
+                id="tvattstall_kommod"
+                name="tvattstall_kommod"
+              >
+                <option value="Kommod utan el">Kommod utan el</option>
+                <option value="Kommod med el">Kommod med el</option>
               </select>
             </div>
 
@@ -670,8 +717,46 @@
                 <option value="Ja">Ja</option>
               </select>
             </div>
+
+            <div class="field">
+              <label for="torktumlare">Torktumlare</label>
+              <select id="torktumlare" name="torktumlare">
+                <option value="Nej">Nej</option>
+                <option value="Ja">Ja</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="torkskap">Torkskåp</label>
+              <select id="torkskap" name="torkskap">
+                <option value="Nej">Nej</option>
+                <option value="Ja">Ja</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="inklakat_badkar">Inklakat badkar</label>
+              <select
+                id="inklakat_badkar"
+                name="inklakat_badkar"
+              >
+                <option value="Nej">Nej</option>
+                <option value="Ja">Ja</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="varmepanna_vvb">
+                Värmepanna / varmvattenberedare
+              </label>
+              <select id="varmepanna_vvb" name="varmepanna_vvb">
+                <option value="Nej">Nej</option>
+                <option value="Ja">Ja</option>
+              </select>
+            </div>
           </div>
 
+          <!-- El -->
           <h4 style="font-size: 13px; margin: 14px 0 6px">El</h4>
           <div class="field-grid">
             <div class="field">
@@ -709,7 +794,59 @@
                 <option value="Ja">Ja</option>
               </select>
             </div>
+
+            <div class="field">
+              <label for="eluttag_antal">Eluttag (antal)</label>
+              <input
+                type="number"
+                id="eluttag_antal"
+                name="eluttag_antal"
+                min="0"
+                step="1"
+                value="0"
+              />
+            </div>
+
+            <div class="field">
+              <label for="el_nisch">Nisch</label>
+              <select id="el_nisch" name="el_nisch">
+                <option value="Nej">Nej</option>
+                <option value="Ja">Ja</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="el_spegel">Spegel</label>
+              <select id="el_spegel" name="el_spegel">
+                <option value="Standard">Standard</option>
+                <option value="Spegelskåp med belysning">
+                  Spegelskåp med belysning
+                </option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="byte_elcentral">Byte av elcentral</label>
+              <select
+                id="byte_elcentral"
+                name="byte_elcentral"
+              >
+                <option value="Nej">Nej</option>
+                <option value="Ja">Ja</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="pax_flakt">PAX-fläkt</label>
+              <select id="pax_flakt" name="pax_flakt">
+                <option value="Nej">Nej</option>
+                <option value="Ja">Ja</option>
+              </select>
+            </div>
           </div>
+
+          <!-- Byggstart – vi skickar alltid Ja som default (kan döljas) -->
+          <input type="hidden" id="byggstart" name="byggstart" value="Ja" />
         </section>
 
         <!-- STEP 4 – Kontakt & bekräftelse -->
