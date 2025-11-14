@@ -1,318 +1,340 @@
-/* -----------------------------
-   JOBRYAN STEP WIZARD (A FLOW)
--------------------------------- */
+// public/app.js
+// Frontend for Jobryan badrums-offert (multi-step wizard with summering)
 
-let currentStep = 0;
+(function () {
+  const form = document.getElementById("bathroom-form");
+  const steps = Array.from(document.querySelectorAll(".step"));
+  const btnPrev = document.getElementById("btn-prev");
+  const btnNext = document.getElementById("btn-next");
+  const btnSubmit = document.getElementById("btn-submit");
+  const stepCounter = document.getElementById("step-counter");
+  const stepBarFill = document.getElementById("step-bar-fill");
+  const formStatus = document.getElementById("form-status");
 
-// ALL FORM DATA STORED HERE
-let formData = {
-  address: "",
-  property_type: "",
-  era: "",
-  floor: "",
-  elevator: "",
-  kvm: "",
-  floor_surface: "",
-  floor_tile_size: "",
-  wall_surface: "",
-  wall_tile_size: "",
-  dolda_ror: "",
-  nytt_innertak: "",
-  rivning_vaggar: "",
-  name: "",
-  phone: "",
-  email: ""
-};
+  // summary DOM
+  const summaryTagline = document.getElementById("summary-tagline");
+  const summaryPriceMain = document.getElementById("summary-price-main");
+  const summaryChip = document.getElementById("summary-chip");
+  const summaryPropertyList = document.getElementById(
+    "summary-property-list"
+  );
+  const summaryBathroomList = document.getElementById(
+    "summary-bathroom-list"
+  );
+  const summaryPriceBreakdown = document.getElementById(
+    "summary-price-breakdown"
+  );
 
-// ----- STEP DEFINITIONS -----
+  // state
+  let currentStep = 0;
+  const totalSteps = steps.length;
+  const state = {
+    price: null,
+    breakdown: null,
+  };
 
-const steps = [
-  {
-    title: "Fastighetsinformation",
-    render: () => `
-      <div class="step-block">
-        <label>Adress</label>
-        <input type="text" id="address" placeholder="Ex: Slätbaksvägen 17" value="${formData.address}">
-      </div>
+  // -------- helper: show step --------
+  function showStep(index) {
+    currentStep = Math.max(0, Math.min(totalSteps - 1, index));
+    steps.forEach((step, i) => {
+      step.classList.toggle("active", i === currentStep);
+    });
 
-      <div class="step-block">
-        <label>Fastighetstyp</label>
-        <div id="option-buttons">
-          ${optionButton("property_type","Villa")}
-          ${optionButton("property_type","Lägenhet")}
-          ${optionButton("property_type","Radhus")}
-        </div>
-      </div>
+    // update buttons
+    btnPrev.disabled = currentStep === 0;
+    btnPrev.style.visibility = currentStep === 0 ? "hidden" : "visible";
 
-      <div class="step-block">
-        <label>Era</label>
-        <div id="option-buttons">
-          ${optionButton("era","20-tal")}
-          ${optionButton("era","30-tal")}
-          ${optionButton("era","40-tal")}
-          ${optionButton("era","50-tal")}
-          ${optionButton("era","60-tal")}
-          ${optionButton("era","70-tal")}
-          ${optionButton("era","80-tal")}
-          ${optionButton("era","90-tal")}
-        </div>
-      </div>
+    if (currentStep === totalSteps - 1) {
+      btnNext.style.display = "none";
+      btnSubmit.style.display = "inline-flex";
+    } else {
+      btnNext.style.display = "inline-flex";
+      btnSubmit.style.display = "none";
+      btnNext.textContent =
+        currentStep === totalSteps - 2 ? "Beräkna pris" : "Nästa steg";
+    }
 
-      <div class="step-block">
-        <label>Våningsplan</label>
-        <div id="option-buttons">
-          ${optionButton("floor","BV")}
-          ${optionButton("floor","1tr")}
-          ${optionButton("floor","2tr")}
-          ${optionButton("floor","3tr")}
-          ${optionButton("floor","4tr")}
-        </div>
-      </div>
+    // step text + bar
+    stepCounter.textContent = `Steg ${currentStep + 1} av ${totalSteps}`;
+    const pct = ((currentStep + 1) / totalSteps) * 100;
+    stepBarFill.style.width = `${pct}%`;
 
-      <div class="step-block">
-        <label>Hiss</label>
-        <div id="option-buttons">
-          ${optionButton("elevator","Stor")}
-          ${optionButton("elevator","Liten")}
-          ${optionButton("elevator","Ingen")}
-        </div>
-      </div>
-    `
-  },
-
-  {
-    title: "Badrum – Golv",
-    render: () => `
-      <div class="step-block">
-        <label>Storlek (kvm)</label>
-        <input type="number" id="kvm" value="${formData.kvm}" placeholder="Ex: 3.5">
-      </div>
-
-      <div class="step-block">
-        <label>Ytskikt golv</label>
-        <div id="option-buttons">
-          ${optionButton("floor_surface","Plattor")}
-          ${optionButton("floor_surface","Våtrumsmatta")}
-          ${optionButton("floor_surface","Microcement","orange")}
-        </div>
-      </div>
-
-      <div class="step-block">
-        <label>Plattstorlek</label>
-        <div id="option-buttons">
-          ${optionButton("floor_tile_size","<60x60")}
-          ${optionButton("floor_tile_size",">60x60")}
-        </div>
-      </div>
-    `
-  },
-
-  {
-    title: "Badrum – Väggar",
-    render: () => `
-      <div class="step-block">
-        <label>Ytskikt väggar</label>
-        <div id="option-buttons">
-          ${optionButton("wall_surface","Plattor")}
-          ${optionButton("wall_surface","Våtrumsmatta")}
-          ${optionButton("wall_surface","Microcement","orange")}
-        </div>
-      </div>
-
-      <div class="step-block">
-        <label>Plattstorlek vägg</label>
-        <div id="option-buttons">
-          ${optionButton("wall_tile_size","<60x60")}
-          ${optionButton("wall_tile_size",">60x60")}
-        </div>
-      </div>
-    `
-  },
-
-  {
-    title: "Extra val",
-    render: () => `
-      <div class="step-block">
-        <label>Dolda rör</label>
-        <div id="option-buttons">
-          ${optionButton("dolda_ror","Ja")}
-          ${optionButton("dolda_ror","Nej")}
-        </div>
-      </div>
-
-      <div class="step-block">
-        <label>Nytt innertak</label>
-        <div id="option-buttons">
-          ${optionButton("nytt_innertak","Ja")}
-          ${optionButton("nytt_innertak","Nej")}
-        </div>
-      </div>
-
-      <div class="step-block">
-        <label>Rivning av väggar</label>
-        <input type="number" id="rivning_vaggar" value="${formData.rivning_vaggar}" placeholder="Antal väggar">
-      </div>
-    `
-  },
-
-  {
-    title: "Dina uppgifter",
-    render: () => `
-      <div class="step-block">
-        <label>Namn</label>
-        <input type="text" id="name" value="${formData.name}">
-      </div>
-
-      <div class="step-block">
-        <label>Telefonnummer</label>
-        <input type="text" id="phone" value="${formData.phone}">
-      </div>
-
-      <div class="step-block">
-        <label>Email</label>
-        <input type="email" id="email" value="${formData.email}">
-      </div>
-
-      <div id="summary-box">
-        <strong>Sammanfattning kommer på nästa sida</strong>
-      </div>
-    `
+    updateSummary();
   }
-];
 
-// ----------------------------------
-// Option Button Generator
-// ----------------------------------
-function optionButton(field, value, color = "green") {
-  let selected = formData[field] === value;
-  let cls = selected
-    ? (color === "orange" ? "selected-orange" : "selected-green")
-    : "";
+  // -------- helper: collect data for payload --------
+  function collectEstimatePayload() {
+    const fd = new FormData(form);
+    // build plain object
+    const obj = {};
+    fd.forEach((value, key) => {
+      obj[key] = value;
+    });
 
-  return `<div class="option-btn ${cls}" onclick="selectOption('${field}','${value}','${color}')">${value}</div>`;
-}
+    // convert some known numeric fields
+    const numericKeys = [
+      "zon",
+      "kvm_golv",
+      "kvm_vagg",
+      "takhojd",
+      "rivning_vaggar",
+      "gerade_horn_meter",
+      "fyll_i_antal_meter",
+      "spotlight_antal",
+    ];
+    numericKeys.forEach((k) => {
+      if (obj[k] !== undefined && obj[k] !== "") {
+        const num = Number(obj[k]);
+        if (!Number.isNaN(num)) obj[k] = num;
+      }
+    });
 
-// Handle option selection
-window.selectOption = function(field, value, color) {
-  formData[field] = value;
-  renderStep(); // re-render to update selection color
-};
-
-// ----------------------------------
-// Render a step
-// ----------------------------------
-function renderStep() {
-  document.getElementById("wizard-step").innerHTML = steps[currentStep].render();
-  document.getElementById("step-title").innerText = steps[currentStep].title;
-  document.getElementById("step-progress").innerText =
-    `Steg ${currentStep+1} av ${steps.length}`;
-  
-  document.getElementById("prev-btn").classList.toggle("hidden", currentStep === 0);
-
-  document.getElementById("next-btn").innerText =
-    currentStep === steps.length - 1 ? "Visa resultat" : "Nästa";
-}
-
-// ----------------------------------
-// Validate + Save inputs every step
-// ----------------------------------
-function saveInputs() {
-  // Generic read of inputs that exist on current step
-  const ids = ["address","kvm","rivning_vaggar","name","phone","email"];
-  ids.forEach(id => {
-    let el = document.getElementById(id);
-    if (el) formData[id] = el.value;
-  });
-}
-
-// ----------------------------------
-// Go NEXT
-// ----------------------------------
-document.getElementById("next-btn").onclick = () => {
-  saveInputs();
-
-  if (currentStep < steps.length - 1) {
-    currentStep++;
-    renderStep();
-  } else {
-    showSummaryScreen();
+    return obj;
   }
-};
 
-// ----------------------------------
-// Go BACK
-// ----------------------------------
-document.getElementById("prev-btn").onclick = () => {
-  saveInputs();
-  currentStep--;
-  renderStep();
-};
+  // -------- helper: update summary side --------
+  function updateSummary() {
+    const fd = new FormData(form);
 
-// ----------------------------------
-// SUMMARY + PRICE FETCH
-// ----------------------------------
-function showSummaryScreen() {
-  document.getElementById("wizard-step").innerHTML = `
-    <h3>Ditt preliminära pris</h3>
-    <div id="summary-box">Hämtar pris...</div>
-  `;
+    // property
+    const address = fd.get("address") || "Adress ej angiven";
+    const propertyType = fd.get("property_type") || "–";
+    const era = fd.get("era") || "–";
+    const floor = fd.get("floor") || "–";
+    const elevator = fd.get("elevator") || "–";
 
-  // CALL YOUR BACKEND
-  fetch("/api/estimate/badrum", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({
-      postnummer: "12051",
-      zon: 3,
-      kvm_golv: formData.kvm,
-      kvm_vagg: formData.kvm * 2.78,
-      takhojd: 2.6,
-
-      microcement_golv: formData.floor_surface === "Microcement" ? "Ja" : "Nej",
-      microcement_vagg: formData.wall_surface === "Microcement" ? "Ja" : "Nej",
-      ny_troskel: "Nej",
-
-      byta_dorrblad: "Nej",
-      byta_karm_dorr: "Nej",
-      slipning_dorr: "Nej",
-      bankskiva_ovan_tm_tt: "Nej",
-      vaggskap: "Nej",
-
-      nytt_innertak: formData.nytt_innertak,
-      rivning_vaggar: formData.rivning_vaggar,
-      nya_vaggar_material: "Nej",
-
-      gerade_horn_meter: 0,
-      fyll_i_antal_meter: 0,
-
-      dolda_ror: formData.dolda_ror
-    })
-  })
-  .then(r => r.json())
-  .then(data => {
-    document.getElementById("summary-box").innerHTML = `
-      <p><strong>Arbete ex moms:</strong> ${data.pris_arbete_ex_moms} kr</p>
-      <p><strong>Material ex moms:</strong> ${data.pris_grundmaterial_ex_moms} kr</p>
-      <p><strong>Resekostnad:</strong> ${data.pris_resekostnad_ex_moms} kr</p>
-      <p><strong>Sophantering:</strong> ${data.pris_sophantering_ex_moms} kr</p>
-      <hr>
-      <p><strong>Totalt preliminärt pris:</strong> ${data.pris_totalt_ink_moms} kr</p>
-      <hr>
-      <button id="send-offert-btn" class="nav-btn">Skicka offert</button>
+    summaryPropertyList.innerHTML = `
+      <li><strong>${address}</strong></li>
+      <li>${propertyType}, ${era}</li>
+      <li>Våningsplan: ${floor}, hiss: ${elevator}</li>
     `;
 
-    document.getElementById("send-offert-btn").onclick = sendOffert;
+    // bathroom basics
+    const kvmGolv = fd.get("kvm_golv") || "–";
+    const kvmVagg = fd.get("kvm_vagg") || "–";
+    const takhojd = fd.get("takhojd") || "–";
+    const zon = fd.get("zon") || "–";
+
+    const microGolv = fd.get("microcement_golv") || "Nej";
+    const microVagg = fd.get("microcement_vagg") || "Nej";
+    const golvv = fd.get("golvvarme") || "Nej";
+    const handdukstork = fd.get("handdukstork") || "Nej";
+
+    const snickeriPills = [];
+    if (microGolv === "Ja") snickeriPills.push("Microcement golv");
+    if (microVagg === "Ja") snickeriPills.push("Microcement vägg");
+    if ((fd.get("nytt_innertak") || "Nej") === "Ja")
+      snickeriPills.push("Nytt innertak");
+    if ((fd.get("vaggskap") || "Nej") === "Ja") snickeriPills.push("Väggskåp");
+    if ((fd.get("ny_troskel") || "Nej") === "Ja") snickeriPills.push("Ny tröskel");
+    if ((fd.get("byta_karm_dorr") || "Nej") === "Ja")
+      snickeriPills.push("Byta karm + dörr");
+    if ((fd.get("byta_dorrblad") || "Nej") === "Ja")
+      snickeriPills.push("Byta dörrblad");
+
+    const vvsPills = [];
+    if ((fd.get("dolda_ror") || "Nej") === "Ja") vvsPills.push("Dolda rör");
+    const wc = fd.get("wc");
+    if (wc && wc !== "Ingen WC") vvsPills.push(wc);
+    const duschblandare = fd.get("duschblandare");
+    if (duschblandare && duschblandare !== "Standard")
+      vvsPills.push(duschblandare);
+    if ((fd.get("tvattmaskin") || "Nej") === "Ja") vvsPills.push("Tvättmaskin");
+
+    const elPills = [];
+    const takbelysning = fd.get("takbelysning");
+    if (takbelysning) elPills.push(`Tak: ${takbelysning}`);
+    if (Number(fd.get("spotlight_antal") || 0) > 0)
+      elPills.push(fd.get("spotlight_antal") + " spotlights");
+    if (golvv === "Ja") elPills.push("Golvvärme");
+    if (handdukstork === "Ja") elPills.push("Handdukstork");
+
+    summaryBathroomList.innerHTML = `
+      <li>Golv: <strong>${kvmGolv} m²</strong> · Vägg: <strong>${kvmVagg} m²</strong> · Takhöjd: <strong>${takhojd} m</strong></li>
+      <li>Zon: <strong>${zon}</strong></li>
+      <li style="margin-top:4px;">Snickeri:</li>
+      <li>
+        <div class="pill-row">
+          ${
+            snickeriPills.length
+              ? snickeriPills
+                  .map((t) => `<span class="pill badge-good">${t}</span>`)
+                  .join("")
+              : '<span class="pill">Standardutförande</span>'
+          }
+        </div>
+      </li>
+      <li style="margin-top:4px;">VVS:</li>
+      <li>
+        <div class="pill-row">
+          ${
+            vvsPills.length
+              ? vvsPills
+                  .map((t) => `<span class="pill badge-good">${t}</span>`)
+                  .join("")
+              : '<span class="pill">Standard</span>'
+          }
+        </div>
+      </li>
+      <li style="margin-top:4px;">El:</li>
+      <li>
+        <div class="pill-row">
+          ${
+            elPills.length
+              ? elPills
+                  .map((t) => `<span class="pill badge-good">${t}</span>`)
+                  .join("")
+              : '<span class="pill">Grundbelysning</span>'
+          }
+        </div>
+      </li>
+    `;
+
+    // price summary
+    if (state.price && state.price.ok) {
+      const total = Number(state.price.pris_totalt_ink_moms || 0);
+      if (Number.isFinite(total) && total > 0) {
+        summaryPriceMain.textContent =
+          total.toLocaleString("sv-SE") + " kr";
+        summaryChip.style.display = "inline-flex";
+        summaryTagline.textContent = "Preliminärt pris – justeras efter platsbesök.";
+      }
+
+      const parts = [];
+      if (state.price.pris_arbete_ex_moms != null) {
+        parts.push(
+          `Arbete exkl. moms: <strong>${Number(
+            state.price.pris_arbete_ex_moms
+          ).toLocaleString("sv-SE")} kr</strong>`
+        );
+      }
+      if (state.price.pris_grundmaterial_ex_moms != null) {
+        parts.push(
+          `Grundmaterial exkl. moms: <strong>${Number(
+            state.price.pris_grundmaterial_ex_moms
+          ).toLocaleString("sv-SE")} kr</strong>`
+        );
+      }
+      if (state.price.pris_resekostnad_ex_moms != null) {
+        parts.push(
+          `Resekostnad exkl. moms: <strong>${Number(
+            state.price.pris_resekostnad_ex_moms
+          ).toLocaleString("sv-SE")} kr</strong>`
+        );
+      }
+
+      summaryPriceBreakdown.innerHTML = parts
+        .map((p) => `<li>${p}</li>`)
+        .join("");
+    } else {
+      summaryPriceMain.textContent = "–";
+      summaryChip.style.display = "none";
+      summaryPriceBreakdown.innerHTML =
+        "<li>Arbete, material m.m. visas efter beräkning.</li>";
+    }
+  }
+
+  // -------- API call: calculate estimate --------
+  async function calculateEstimate() {
+    const payload = collectEstimatePayload();
+
+    formStatus.textContent = "Beräknar pris …";
+    btnNext.disabled = true;
+
+    try {
+      const res = await fetch("/api/estimate/badrum", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      console.log("[estimate] response", data);
+      state.price = data;
+      state.breakdown = data.sheet || null;
+
+      if (!data.ok) {
+        formStatus.textContent =
+          "Kunde inte beräkna pris (kontakta Jobryan om felet kvarstår).";
+      } else {
+        formStatus.textContent = "Pris beräknat.";
+      }
+    } catch (err) {
+      console.error("estimate error", err);
+      state.price = null;
+      formStatus.textContent =
+        "Tekniskt fel vid beräkning, försök igen om en stund.";
+    } finally {
+      btnNext.disabled = false;
+      updateSummary();
+    }
+  }
+
+  // -------- API call: send offer (optional backend) --------
+  async function sendOffer() {
+    const payload = collectEstimatePayload();
+    payload.price_result = state.price || null;
+
+    formStatus.textContent = "Skickar offertförfrågan …";
+    btnSubmit.disabled = true;
+
+    try {
+      // adjust endpoint to match your server route if needed
+      const res = await fetch("/api/offert", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        throw new Error("HTTP " + res.status);
+      }
+
+      formStatus.textContent = "Offertförfrågan skickad!";
+    } catch (err) {
+      console.error("send offer error", err);
+      formStatus.textContent =
+        "Kunde inte skicka automatiskt – prova igen eller kontakta Jobryan.";
+    } finally {
+      btnSubmit.disabled = false;
+    }
+  }
+
+  // -------- event wiring --------
+  btnPrev.addEventListener("click", () => {
+    showStep(currentStep - 1);
   });
-}
 
-// ----------------------------------
-// SEND OFFER EMAIL
-// ----------------------------------
-function sendOffert() {
-  alert("Offert skickad! (backend to implement)");
-}
+  btnNext.addEventListener("click", async () => {
+    // when leaving step 3 -> calculate price
+    if (currentStep === 2) {
+      await calculateEstimate();
+      showStep(currentStep + 1);
+    } else {
+      showStep(currentStep + 1);
+    }
+  });
 
-// ----------------------------------
-// INITIAL RENDER
-// ----------------------------------
-renderStep();
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    await sendOffer();
+  });
+
+  // live summary updates
+  form.addEventListener("input", (e) => {
+    if (e.target.id === "kvm_golv_slider") {
+      const v = Number(e.target.value);
+      document.getElementById("kvm_golv_text").textContent = v.toString();
+      document.getElementById("kvm_golv").value = v.toString();
+    }
+    updateSummary();
+  });
+
+  // initial slider sync + summary
+  const slider = document.getElementById("kvm_golv_slider");
+  if (slider) {
+    document.getElementById("kvm_golv_text").textContent = slider.value;
+    document.getElementById("kvm_golv").value = slider.value;
+  }
+  showStep(0);
+})();
