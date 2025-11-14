@@ -1,377 +1,409 @@
-// public/app.js
-// Frontend för Jobryan badrums-offert – multi-step wizard + summering
+// SIMPLE STATE OBJECT
+const state = {
+  // step 1
+  address: "",
+  propertyType: "Lägenhet",
+  era: "60-tal",
+  floor: "3 tr",
+  lift: "Stor",
 
-(function () {
-  const form = document.getElementById("bathroom-form");
-  const steps = Array.from(document.querySelectorAll(".step"));
-  const btnPrev = document.getElementById("btn-prev");
-  const btnNext = document.getElementById("btn-next");
-  const btnSubmit = document.getElementById("btn-submit");
-  const stepCounter = document.getElementById("step-counter");
-  const stepBarFill = document.getElementById("step-bar-fill");
-  const formStatus = document.getElementById("form-status");
+  // step 2
+  postnummer: "",
+  zon: "3",
+  kvm_golv: 8.5,
+  kvm_vagg: "",
+  takhojd: 2.4,
 
-  // summary DOM
-  const summaryTagline = document.getElementById("summary-tagline");
-  const summaryPriceMain = document.getElementById("summary-price-main");
-  const summaryChip = document.getElementById("summary-chip");
-  const summaryPropertyList = document.getElementById(
-    "summary-property-list"
-  );
-  const summaryBathroomList = document.getElementById(
-    "summary-bathroom-list"
-  );
-  const summaryPriceBreakdown = document.getElementById(
-    "summary-price-breakdown"
-  );
+  // step 3 – snickeri
+  microcement_golv: "Nej",
+  microcement_vagg: "Nej",
+  ny_troskel: "Ja",
+  byta_dorrblad: "Nej",
+  byta_karm_dorr: "Nej",
+  slipning_dorr: "Nej",
+  bankskiva_ovan_tm_tt: "Nej",
+  vaggskap: "Nej",
+  nytt_innertak: "Ja",
+  rivning_vaggar: "Nej",
+  nya_vaggar_material: "Nej",
+  gerade_horn_meter: "Nej",
+  fyll_i_antal_meter: 0,
 
-  // state
-  let currentStep = 0;
-  const totalSteps = steps.length;
-  const state = {
-    price: null,
-    breakdown: null,
-  };
+  // VVS
+  dolda_ror: "Nej",
+  wc: "Ingen WC",
+  duschblandare: "Standard",
+  tvattmaskin: "Nej",
+  torktumlare: "Nej",
+  torkskap: "Nej",
 
-  // -------- visa steg --------
-  function showStep(index) {
-    currentStep = Math.max(0, Math.min(totalSteps - 1, index));
-    steps.forEach((step, i) => {
-      step.classList.toggle("active", i === currentStep);
+  // El
+  takbelysning: "Plafond",
+  spotlight_antal: 0,
+  golvvarme: "Nej",
+  handdukstork: "Nej",
+
+  // contact
+  contact_namn: "",
+  contact_tel: "",
+  contact_mail: "",
+
+  // price result
+  price: null,
+  price_breakdown: null
+};
+
+// ---------- STEP / WIZARD ----------
+function initSteps() {
+  const steps = Array.from(document.querySelectorAll(".js-step"));
+  const nextBtns = document.querySelectorAll(".js-next");
+  const prevBtns = document.querySelectorAll(".js-prev");
+  const stepIndicator = document.getElementById("step-indicator");
+  const progressBar = document.getElementById("progress-bar");
+
+  let currentStep = 1;
+  const maxStep = 4;
+
+  function showStep(step) {
+    currentStep = Math.min(Math.max(step, 1), maxStep);
+    steps.forEach((el) => {
+      const s = Number(el.dataset.step);
+      el.classList.toggle("is-active", s === currentStep);
     });
-
-    btnPrev.disabled = currentStep === 0;
-    btnPrev.style.visibility = currentStep === 0 ? "hidden" : "visible";
-
-    if (currentStep === totalSteps - 1) {
-      btnNext.style.display = "none";
-      btnSubmit.style.display = "inline-flex";
-    } else {
-      btnNext.style.display = "inline-flex";
-      btnSubmit.style.display = "none";
-      btnNext.textContent =
-        currentStep === totalSteps - 2 ? "Beräkna pris" : "Nästa steg";
-    }
-
-    stepCounter.textContent = `Steg ${currentStep + 1} av ${totalSteps}`;
-    const pct = ((currentStep + 1) / totalSteps) * 100;
-    stepBarFill.style.width = `${pct}%`;
-
-    updateSummary();
+    stepIndicator.textContent = `Steg ${currentStep} av ${maxStep}`;
+    progressBar.style.width = `${((currentStep - 1) / (maxStep - 1)) * 100}%`;
   }
 
-  // -------- samla data till payload --------
-  function collectEstimatePayload() {
-    const fd = new FormData(form);
-    const obj = {};
-    fd.forEach((value, key) => {
-      obj[key] = value;
-    });
-
-    // numeriska fält
-    const numericKeys = [
-      "zon",
-      "kvm_golv",
-      "kvm_vagg",
-      "takhojd",
-      "rivning_vaggar",
-      "gerade_horn_meter",
-      "fyll_i_antal_meter",
-      "spotlight_antal",
-      "eluttag_antal",
-    ];
-    numericKeys.forEach((k) => {
-      if (obj[k] !== undefined && obj[k] !== "") {
-        const num = Number(obj[k]);
-        if (!Number.isNaN(num)) obj[k] = num;
+  nextBtns.forEach((btn) =>
+    btn.addEventListener("click", async () => {
+      if (currentStep === 3) {
+        // calculate price when leaving step 3
+        await calculatePrice();
       }
-    });
+      showStep(currentStep + 1);
+      renderSummary();
+    })
+  );
 
-    return obj;
-  }
+  prevBtns.forEach((btn) =>
+    btn.addEventListener("click", () => {
+      showStep(currentStep - 1);
+      renderSummary();
+    })
+  );
 
-  // -------- uppdatera summering --------
-  function updateSummary() {
-    const fd = new FormData(form);
+  showStep(1);
+}
 
-    // fastighetsinfo
-    const address = fd.get("address") || "Adress ej angiven";
-    const propertyType = fd.get("property_type") || "–";
-    const era = fd.get("era") || "–";
-    const floor = fd.get("floor") || "–";
-    const elevator = fd.get("elevator") || "–";
+// ---------- FORM BINDINGS ----------
+function bindInputs() {
+  // text / number inputs
+  document
+    .querySelectorAll("[data-field]")
+    .forEach((input) => {
+      const field = input.dataset.field;
 
-    summaryPropertyList.innerHTML = `
-      <li><strong>${address}</strong></li>
-      <li>${propertyType}, ${era}</li>
-      <li>Våningsplan: ${floor}, hiss: ${elevator}</li>
-    `;
-
-    // badrum / snickeri / VVS / el
-    const kvmGolv = fd.get("kvm_golv") || "–";
-    const kvmVagg = fd.get("kvm_vagg") || "–";
-    const takhojd = fd.get("takhojd") || "–";
-    const zon = fd.get("zon") || "–";
-
-    const microGolv = fd.get("microcement_golv") || "Nej";
-    const microVagg = fd.get("microcement_vagg") || "Nej";
-    const golvv = fd.get("golvvarme") || "Nej";
-    const handdukstork = fd.get("handdukstork") || "Nej";
-
-    const snickeriPills = [];
-    if (microGolv === "Ja") snickeriPills.push("Microcement golv");
-    if (microVagg === "Ja") snickeriPills.push("Microcement vägg");
-    if ((fd.get("nytt_innertak") || "Nej") === "Ja")
-      snickeriPills.push("Nytt innertak");
-    if ((fd.get("vaggskap") || "Nej") === "Ja") snickeriPills.push("Väggskåp");
-    if ((fd.get("ny_troskel") || "Nej") === "Ja") snickeriPills.push("Ny tröskel");
-    if ((fd.get("byta_karm_dorr") || "Nej") === "Ja")
-      snickeriPills.push("Byta karm + dörr");
-    if ((fd.get("byta_dorrblad") || "Nej") === "Ja")
-      snickeriPills.push("Byta dörrblad");
-    if ((fd.get("bankskiva_ovan_tm_tt") || "Nej") === "Ja")
-      snickeriPills.push("Bänkskiva ovan TM/TT");
-    if ((fd.get("slipning_dorr") || "Nej") === "Ja")
-      snickeriPills.push("Slipa dörr");
-    if (Number(fd.get("rivning_vaggar") || 0) > 0)
-      snickeriPills.push(
-        `Rivning väggar: ${fd.get("rivning_vaggar")} st`
-      );
-    if ((fd.get("nya_vaggar_material") || "Nej") !== "Nej")
-      snickeriPills.push(`Nya väggar: ${fd.get("nya_vaggar_material")}`);
-    if (Number(fd.get("gerade_horn_meter") || 0) > 0)
-      snickeriPills.push(`Gerade hörn: ${fd.get("gerade_horn_meter")} m`);
-    if (Number(fd.get("fyll_i_antal_meter") || 0) > 0)
-      snickeriPills.push(`Fris: ${fd.get("fyll_i_antal_meter")} m`);
-
-    const vvsPills = [];
-    if ((fd.get("dolda_ror") || "Nej") === "Ja") vvsPills.push("Dolda rör");
-    const wc = fd.get("wc");
-    if (wc && wc !== "Ingen WC") vvsPills.push(wc);
-    if ((fd.get("byte_avloppsgroda") || "Nej") === "Ja")
-      vvsPills.push("Byte av avloppsgroda");
-    if ((fd.get("ny_slutsbotten") || "Nej") === "Ja")
-      vvsPills.push("Ny slutsbotten");
-    const brunn = fd.get("brunn");
-    if (brunn && brunn !== "Standard") vvsPills.push(brunn);
-    const duschblandare = fd.get("duschblandare");
-    if (duschblandare && duschblandare !== "Standard")
-      vvsPills.push(duschblandare);
-    const tvattBlandare = fd.get("tvattstallsblandare");
-    if (tvattBlandare && tvattBlandare !== "Standard")
-      vvsPills.push(tvattBlandare);
-    const tvattKommod = fd.get("tvattstall_kommod");
-    if (tvattKommod) vvsPills.push(tvattKommod);
-    if ((fd.get("tvattmaskin") || "Nej") === "Ja") vvsPills.push("Tvättmaskin");
-    if ((fd.get("torktumlare") || "Nej") === "Ja")
-      vvsPills.push("Torktumlare");
-    if ((fd.get("torkskap") || "Nej") === "Ja") vvsPills.push("Torkskåp");
-    if ((fd.get("inklakat_badkar") || "Nej") === "Ja")
-      vvsPills.push("Inklakat badkar");
-    if ((fd.get("varmepanna_vvb") || "Nej") === "Ja")
-      vvsPills.push("Värmepanna/VVB");
-
-    const elPills = [];
-    const takbelysning = fd.get("takbelysning");
-    if (takbelysning) elPills.push(`Tak: ${takbelysning}`);
-    if (Number(fd.get("spotlight_antal") || 0) > 0)
-      elPills.push(fd.get("spotlight_antal") + " spotlights");
-    if (golvv === "Ja") elPills.push("Golvvärme");
-    if (handdukstork === "Ja") elPills.push("Handdukstork");
-    if (Number(fd.get("eluttag_antal") || 0) > 0)
-      elPills.push(`Eluttag: ${fd.get("eluttag_antal")} st`);
-    if ((fd.get("el_nisch") || "Nej") === "Ja") elPills.push("Nisch");
-    const elSpegel = fd.get("el_spegel");
-    if (elSpegel && elSpegel !== "Standard") elPills.push(elSpegel);
-    if ((fd.get("byte_elcentral") || "Nej") === "Ja")
-      elPills.push("Byte av elcentral");
-    if ((fd.get("pax_flakt") || "Nej") === "Ja") elPills.push("PAX-fläkt");
-
-    summaryBathroomList.innerHTML = `
-      <li>Golv: <strong>${kvmGolv} m²</strong> · Vägg: <strong>${kvmVagg} m²</strong> · Takhöjd: <strong>${takhojd} m</strong></li>
-      <li>Zon: <strong>${zon}</strong></li>
-      <li style="margin-top:4px;">Snickeri:</li>
-      <li>
-        <div class="pill-row">
-          ${
-            snickeriPills.length
-              ? snickeriPills
-                  .map((t) => `<span class="pill badge-good">${t}</span>`)
-                  .join("")
-              : '<span class="pill">Standardutförande</span>'
-          }
-        </div>
-      </li>
-      <li style="margin-top:4px;">VVS:</li>
-      <li>
-        <div class="pill-row">
-          ${
-            vvsPills.length
-              ? vvsPills
-                  .map((t) => `<span class="pill badge-good">${t}</span>`)
-                  .join("")
-              : '<span class="pill">Standard</span>'
-          }
-        </div>
-      </li>
-      <li style="margin-top:4px;">El:</li>
-      <li>
-        <div class="pill-row">
-          ${
-            elPills.length
-              ? elPills
-                  .map((t) => `<span class="pill badge-good">${t}</span>`)
-                  .join("")
-              : '<span class="pill">Grundbelysning</span>'
-          }
-        </div>
-      </li>
-    `;
-
-    // pris-sammanfattning
-    if (state.price && state.price.ok) {
-      const total = Number(state.price.pris_totalt_ink_moms || 0);
-      if (Number.isFinite(total) && total > 0) {
-        summaryPriceMain.textContent =
-          total.toLocaleString("sv-SE") + " kr";
-        summaryChip.style.display = "inline-flex";
-        summaryTagline.textContent =
-          "Preliminärt pris – justeras efter platsbesök.";
-      }
-
-      const parts = [];
-      if (state.price.pris_arbete_ex_moms != null) {
-        parts.push(
-          `Arbete exkl. moms: <strong>${Number(
-            state.price.pris_arbete_ex_moms
-          ).toLocaleString("sv-SE")} kr</strong>`
-        );
-      }
-      if (state.price.pris_grundmaterial_ex_moms != null) {
-        parts.push(
-          `Grundmaterial exkl. moms: <strong>${Number(
-            state.price.pris_grundmaterial_ex_moms
-          ).toLocaleString("sv-SE")} kr</strong>`
-        );
-      }
-      if (state.price.pris_resekostnad_ex_moms != null) {
-        parts.push(
-          `Resekostnad exkl. moms: <strong>${Number(
-            state.price.pris_resekostnad_ex_moms
-          ).toLocaleString("sv-SE")} kr</strong>`
-        );
-      }
-
-      summaryPriceBreakdown.innerHTML = parts
-        .map((p) => `<li>${p}</li>`)
-        .join("");
-    } else {
-      summaryPriceMain.textContent = "–";
-      summaryChip.style.display = "none";
-      summaryPriceBreakdown.innerHTML =
-        "<li>Arbete, material m.m. visas efter beräkning.</li>";
-    }
-  }
-
-  // -------- API: räkna fram offert --------
-  async function calculateEstimate() {
-    const payload = collectEstimatePayload();
-
-    formStatus.textContent = "Beräknar pris …";
-    btnNext.disabled = true;
-
-    try {
-      const res = await fetch("/api/estimate/badrum", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
-      console.log("[estimate] response", data);
-      state.price = data;
-      state.breakdown = data.sheet || null;
-
-      if (!data.ok) {
-        formStatus.textContent =
-          "Kunde inte beräkna pris (kontakta Jobryan om felet kvarstår).";
+      // initial from state
+      if (input.type === "range" || input.type === "number") {
+        if (state[field] !== undefined) input.value = state[field];
+      } else if (input.tagName === "SELECT") {
+        if (state[field] !== undefined) input.value = state[field];
       } else {
-        formStatus.textContent = "Pris beräknat.";
+        if (state[field]) input.value = state[field];
       }
-    } catch (err) {
-      console.error("estimate error", err);
-      state.price = null;
-      formStatus.textContent =
-        "Tekniskt fel vid beräkning, försök igen om en stund.";
-    } finally {
-      btnNext.disabled = false;
-      updateSummary();
-    }
+
+      const evt =
+        input.tagName === "SELECT" || input.type === "range"
+          ? "change"
+          : "input";
+
+      input.addEventListener(evt, (e) => {
+        let v = e.target.value;
+        if (e.target.type === "number" || e.target.type === "range") {
+          v = e.target.value === "" ? "" : Number(e.target.value);
+        }
+        state[field] = v;
+        if (field === "kvm_golv") {
+          updateRangeLabel();
+        }
+        renderSummary();
+      });
+    });
+
+  updateRangeLabel();
+}
+
+function updateRangeLabel() {
+  const label = document.getElementById("kvm-golv-value");
+  if (label) {
+    label.textContent = `${state.kvm_golv} m²`;
   }
+}
 
-  // -------- API: skicka offert (du kopplar /api/offert i servern) --------
-  async function sendOffer() {
-    const payload = collectEstimatePayload();
-    payload.price_result = state.price || null;
+// ---------- CONVERT SELECTS TO PILL BUTTONS ----------
+function convertSelectsToPills() {
+  const selects = document.querySelectorAll("select[data-field]");
 
-    formStatus.textContent = "Skickar offertförfrågan …";
-    btnSubmit.disabled = true;
+  selects.forEach((select) => {
+    // keep original select hidden for safety
+    select.style.display = "none";
 
-    try {
-      const res = await fetch("/api/offert", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+    const wrapper = document.createElement("div");
+    wrapper.className = "pill-group";
+
+    Array.from(select.options).forEach((opt) => {
+      const pill = document.createElement("button");
+      pill.type = "button";
+      pill.className = "pill";
+      pill.textContent = opt.textContent;
+      if (opt.value === select.value) pill.classList.add("is-active");
+
+      pill.addEventListener("click", () => {
+        select.value = opt.value;
+        // trigger change on select for state binding
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+
+        wrapper
+          .querySelectorAll(".pill")
+          .forEach((p) => p.classList.remove("is-active"));
+        pill.classList.add("is-active");
       });
 
-      if (!res.ok) {
-        throw new Error("HTTP " + res.status);
-      }
+      wrapper.appendChild(pill);
+    });
 
-      formStatus.textContent = "Offertförfrågan skickad!";
-    } catch (err) {
-      console.error("send offer error", err);
-      formStatus.textContent =
-        "Kunde inte skicka automatiskt – prova igen eller kontakta Jobryan.";
-    } finally {
-      btnSubmit.disabled = false;
-    }
+    select.parentNode.insertBefore(wrapper, select.nextSibling);
+  });
+}
+
+// ---------- SUMMARY RENDERING ----------
+function renderSummary() {
+  // Fastighetsinfo
+  document.getElementById("sum-address").textContent =
+    state.address && state.address.trim().length > 0
+      ? state.address
+      : "Adress ej angiven";
+
+  document.getElementById(
+    "sum-fastighet"
+  ).textContent = `${state.propertyType}, ${state.era}, våning ${state.floor}, hiss: ${state.lift}`;
+
+  // Badrum size
+  const kvmGolv =
+    state.kvm_golv && !isNaN(state.kvm_golv) ? `${state.kvm_golv} m²` : "– m²";
+  const kvmVagg =
+    state.kvm_vagg && !isNaN(state.kvm_vagg)
+      ? `${state.kvm_vagg} m²`
+      : "– m²";
+  const tak =
+    state.takhojd && !isNaN(state.takhojd) ? `${state.takhojd} m` : "– m";
+
+  document.getElementById(
+    "sum-size"
+  ).textContent = `Golv: ${kvmGolv} · Vägg: ${kvmVagg} · Takhöjd: ${tak}`;
+
+  document.getElementById("sum-zon").textContent = `Zon: ${
+    state.zon || "–"
+  }`;
+
+  // Snickeri chips
+  const snickeriContainer = document.getElementById("sum-snickeri-chips");
+  snickeriContainer.innerHTML = "";
+
+  function addChipSnickeri(condition, label) {
+    if (!condition) return;
+    const chip = document.createElement("span");
+    chip.className = "summary-chip summary-chip--accent";
+    chip.textContent = label;
+    snickeriContainer.appendChild(chip);
   }
 
-  // -------- events --------
-  btnPrev.addEventListener("click", () => {
-    showStep(currentStep - 1);
-  });
+  addChipSnickeri(state.microcement_golv === "Ja", "Microcement golv");
+  addChipSnickeri(state.microcement_vagg === "Ja", "Microcement vägg");
+  addChipSnickeri(state.ny_troskel === "Ja", "Ny tröskel");
+  addChipSnickeri(state.byta_dorrblad === "Ja", "Byta dörrblad");
+  addChipSnickeri(state.byta_karm_dorr === "Ja", "Byta karm + dörr");
+  addChipSnickeri(state.slipning_dorr === "Ja", "Slipning dörr");
+  addChipSnickeri(state.bankskiva_ovan_tm_tt === "Ja", "Bänkskiva TM/TT");
+  addChipSnickeri(state.vaggskap === "Ja", "Väggskåp");
+  addChipSnickeri(state.nytt_innertak === "Ja", "Nytt innertak");
+  if (state.rivning_vaggar !== "Nej") {
+    addChipSnickeri(true, `Rivning väggar: ${state.rivning_vaggar} st`);
+  }
+  if (state.nya_vaggar_material !== "Nej") {
+    addChipSnickeri(true, `Nya väggar: ${state.nya_vaggar_material}`);
+  }
+  if (state.gerade_horn_meter !== "Nej") {
+    addChipSnickeri(true, `Gerade hörn: ${state.gerade_horn_meter} m`);
+  }
+  if (state.fyll_i_antal_meter > 0) {
+    addChipSnickeri(true, `Fris: ${state.fyll_i_antal_meter} m`);
+  }
 
-  btnNext.addEventListener("click", async () => {
-    if (currentStep === 2) {
-      // när vi lämnar steg 3 -> kör kalkyl
-      await calculateEstimate();
-      showStep(currentStep + 1);
+  // VVS chips
+  const vvsContainer = document.getElementById("sum-vvs-chips");
+  vvsContainer.innerHTML = "";
+  function addChipVVS(condition, label) {
+    if (!condition) return;
+    const chip = document.createElement("span");
+    chip.className = "summary-chip";
+    chip.textContent = label;
+    vvsContainer.appendChild(chip);
+  }
+
+  addChipVVS(state.dolda_ror === "Ja", "Dolda rör");
+  addChipVVS(true, `WC: ${state.wc}`);
+  addChipVVS(true, `Duschblandare: ${state.duschblandare}`);
+  addChipVVS(state.tvattmaskin === "Ja", "Tvättmaskin");
+  addChipVVS(state.torktumlare === "Ja", "Torktumlare");
+  addChipVVS(state.torkskap === "Ja", "Torkskåp");
+
+  // El chips
+  const elContainer = document.getElementById("sum-el-chips");
+  elContainer.innerHTML = "";
+  function addChipEl(condition, label) {
+    if (!condition) return;
+    const chip = document.createElement("span");
+    chip.className = "summary-chip";
+    chip.textContent = label;
+    elContainer.appendChild(chip);
+  }
+
+  addChipEl(true, `Tak: ${state.takbelysning}`);
+  if (state.spotlight_antal > 0) {
+    addChipEl(true, `Spotlights: ${state.spotlight_antal} st`);
+  }
+  addChipEl(state.golvvarme === "Ja", "Golvvärme");
+  addChipEl(state.handdukstork === "Ja", "Handdukstork");
+
+  // Price box
+  const priceMain = document.getElementById("price-main");
+  const priceSub = document.getElementById("price-sub");
+  const priceRow = document.getElementById("price-pill-row");
+  priceRow.innerHTML = "";
+
+  if (state.price && state.price.pris_totalt_ink_moms) {
+    priceMain.textContent = formatKr(state.price.pris_totalt_ink_moms);
+
+    priceSub.textContent =
+      "Preliminär total inkl. moms. Exakt pris efter platsbesök.";
+
+    function addPricePill(label, value) {
+      const pill = document.createElement("span");
+      pill.className = "price-pill";
+      pill.textContent = `${label}: ${formatKr(value)}`;
+      priceRow.appendChild(pill);
+    }
+
+    addPricePill("Arbete", state.price.pris_arbete_ex_moms);
+    addPricePill("Material", state.price.pris_grundmaterial_ex_moms);
+    addPricePill("Resa & sophantering", state.price.pris_resekostnad_ex_moms);
+  } else {
+    priceMain.textContent = "–";
+    priceSub.textContent =
+      "Arbete, material m.m. visas efter beräkning.";
+  }
+}
+
+function formatKr(num) {
+  if (num === undefined || num === null || num === "" || isNaN(num)) {
+    return "–";
+  }
+  const n = Number(num);
+  return n.toLocaleString("sv-SE", {
+    style: "currency",
+    currency: "SEK",
+    maximumFractionDigits: 0
+  });
+}
+
+// ---------- CALL BACKEND ----------
+async function calculatePrice() {
+  try {
+    const body = {
+      postnummer: state.postnummer,
+      zon: Number(state.zon || 1),
+      kvm_golv: Number(state.kvm_golv || 0),
+      kvm_vagg: Number(state.kvm_vagg || 0),
+      takhojd: Number(state.takhojd || 2.4),
+
+      microcement_golv: state.microcement_golv,
+      microcement_vagg: state.microcement_vagg,
+      ny_troskel: state.ny_troskel,
+      byta_dorrblad: state.byta_dorrblad,
+      byta_karm_dorr: state.byta_karm_dorr,
+      slipning_dorr: state.slipning_dorr,
+      bankskiva_ovan_tm_tt: state.bankskiva_ovan_tm_tt,
+      vaggskap: state.vaggskap,
+      nytt_innertak: state.nytt_innertak,
+      rivning_vaggar: state.rivning_vaggar,
+      nya_vaggar_material: state.nya_vaggar_material,
+      gerade_horn_meter: state.gerade_horn_meter,
+      fyll_i_antal_meter: Number(state.fyll_i_antal_meter || 0),
+
+      dolda_ror: state.dolda_ror,
+      wc: state.wc,
+      duschblandare: state.duschblandare,
+      tvattmaskin: state.tvattmaskin,
+      torktumlare: state.torktumlare,
+      torkskap: state.torkskap,
+
+      takbelysning: state.takbelysning,
+      spotlight_antal: Number(state.spotlight_antal || 0),
+      golvvarme: state.golvvarme,
+      handdukstork: state.handdukstork
+    };
+
+    const priceSub = document.getElementById("price-sub");
+    priceSub.textContent = "Beräknar pris…";
+
+    const res = await fetch("/api/estimate/badrum", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+
+    const data = await res.json();
+    if (!data.ok) {
+      console.error("Estimate error:", data.error);
+      priceSub.textContent =
+        "Kunde inte beräkna pris just nu. Försök igen eller kontakta Jobryan.";
+      state.price = null;
     } else {
-      showStep(currentStep + 1);
+      state.price = data;
     }
-  });
-
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    await sendOffer();
-  });
-
-  form.addEventListener("input", (e) => {
-    if (e.target.id === "kvm_golv_slider") {
-      const v = Number(e.target.value);
-      document.getElementById("kvm_golv_text").textContent = v.toString();
-      document.getElementById("kvm_golv").value = v.toString();
-    }
-    updateSummary();
-  });
-
-  // init
-  const slider = document.getElementById("kvm_golv_slider");
-  if (slider) {
-    document.getElementById("kvm_golv_text").textContent = slider.value;
-    document.getElementById("kvm_golv").value = slider.value;
+  } catch (err) {
+    console.error(err);
+    document.getElementById("price-sub").textContent =
+      "Tekniskt fel vid beräkning.";
+    state.price = null;
   }
-  showStep(0);
-})();
+
+  renderSummary();
+}
+
+// ---------- CONTACT SEND (just console for now) ----------
+function initSendOfferButton() {
+  const btn = document.getElementById("send-offer-btn");
+  if (!btn) return;
+
+  btn.addEventListener("click", () => {
+    // Here you can later POST to your own email-service / CRM.
+    console.log("OFFERT DATA TO SEND:", state);
+    btn.textContent = "Skickad!";
+    btn.disabled = true;
+    setTimeout(() => {
+      btn.textContent = "Skicka offert";
+      btn.disabled = false;
+    }, 2500);
+  });
+}
+
+// ---------- INIT ----------
+document.addEventListener("DOMContentLoaded", () => {
+  bindInputs();
+  convertSelectsToPills();
+  initSteps();
+  initSendOfferButton();
+  renderSummary();
+});
