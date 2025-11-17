@@ -68,7 +68,7 @@ const initialState = {
   takbelysning: "Plafond",
   spotlight_antal: "0",
 
-  // --- API-resultat (steg 9) ---
+  // --- API-resultat ---
   loading: false,
   error: "",
   priceResult: null
@@ -99,26 +99,20 @@ const INCLUDED_OPTIONS = {
   dolda_ror: ["Nej"]
 };
 
-// Labels for the dynamic summary
 const SUMMARY_LABELS = {
-  // Ytskikt
   microcement_golv: "Microcement golv",
   microcement_vagg: "Microcement vägg",
   gerade_horn_meter: "Gerade hörn",
   fyll_i_antal_meter: "Fris",
-  // Snickeri
   ny_troskel: "Ny tröskel",
   byta_dorrblad: "Byte av dörrblad",
   byta_karm_dorr: "Byte av karm + dörr",
   slipning_dorr: "Slipning av dörr",
-  // Inredning
   bankskiva_ovan_tm_tt: "Bänkskiva",
   vaggskap: "Väggskåp",
   nytt_innertak: "Nytt innertak",
-  // Rivning
   rivning_vaggar: "Rivning väggar",
   nya_vaggar_material: "Nya väggar",
-  // VVS
   dolda_ror: "Dolda rör",
   wc: "WC",
   byte_av_avloppsgroda: "Byte av avloppsgroda",
@@ -128,14 +122,12 @@ const SUMMARY_LABELS = {
   tvattstallsblandare: "Tvättställsblandare",
   tvattstall_kommod: "Kommod",
   inklakat_badkar: "Inklätt badkar",
-  // Maskiner
   tvattmaskin: "Tvättmaskin",
   torktumlare: "Torktumlare",
   torkskap: "Torkskåp",
   varme_vp: "Värme VP",
   golvvärme: "Golvvärme",
   handdukstork: "Handdukstork",
-  // El
   takbelysning: "Takbelysning",
   spotlight_antal: "Spotlights",
 };
@@ -174,6 +166,25 @@ const DEFAULT_VALUES = {
 };
 
 
+// ---------- AUTO-CALCULATION LOGIC ----------
+
+// Create a "debounced" version of the calculation.
+// It waits 800ms after the last update before sending the request to the server.
+// This prevents flooding your Google Sheet with requests while typing.
+const triggerLivePrice = debounce(() => {
+  handleCalculate(true); // true = background mode (don't lock UI)
+}, 800);
+
+function debounce(func, wait) {
+  let timeout;
+  return function(...args) {
+    const context = this;
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(context, args), wait);
+  };
+}
+
+
 // ---------- RENDER ROOT ----------
 
 function getRoot() {
@@ -185,25 +196,83 @@ function getRoot() {
 }
 
 function setState(patch) {
+  const oldState = { ...state };
   state = { ...state, ...patch };
+  
   render();
+
+  // If any field that affects price has changed, trigger a calculation
+  // We exclude UI fields like 'loading', 'error', 'step'
+  const ignoreFields = ["loading", "error", "priceResult", "step"];
+  const hasChanges = Object.keys(patch).some(k => !ignoreFields.includes(k));
+
+  if (hasChanges) {
+    // Set loading state locally for the summary box immediately
+    state.loading = true;
+    renderSummaryOnly(); // Re-render just the summary to show "Beräknar..."
+    triggerLivePrice();
+  }
 }
 
 function render() {
   const root = getRoot();
   if (!root) return;
 
-  root.innerHTML = `
-    <div class="layout">
-      <div class="wizard">
-        ${renderHeader()}
-        ${renderStep()}
-      </div>
-      ${renderSummary()}
-    </div>
-  `;
+  // Only create layout once if possible, or just re-render inner
+  // For simplicity we re-render whole inner HTML but input focus might be lost
+  // if we are not careful. The current approach re-renders everything.
+  // To keep input focus, a Virtual DOM is usually used (React/Vue).
+  // Since we are using vanilla JS, we must be careful. 
+  // Ideally, we should only update the parts that changed.
+  // However, for this specific "app-like" request, full re-render on every keystroke
+  // might cause input focus loss.
+  // *FIX:* We will check if the layout exists.
 
-  wireEvents();
+  let layout = root.querySelector(".layout");
+  if (!layout) {
+    root.innerHTML = `
+      <div class="layout">
+        <div class="wizard">
+          <div id="wizard-header-container"></div>
+          <div id="wizard-step-container"></div>
+        </div>
+        <div id="summary-container"></div>
+      </div>
+    `;
+    layout = root.querySelector(".layout");
+  }
+
+  // Update Header
+  document.getElementById("wizard-header-container").innerHTML = renderHeader();
+  
+  // Update Step (only if step changed, otherwise we risk losing focus)
+  // We can cheat slightly: if the step container is empty or step changed, render.
+  // But updating inputs (like typing name) requires re-render to show value?
+  // Actually, native inputs hold their own state. We only need to re-render if structure changes.
+  // For this "Vanilla JS" approach, the safest way to keep focus is to NOT re-render the step 
+  // while typing.
+  // -> We will only re-render the step container if the *step number* changed.
+  // -> If we are just typing, we rely on the input event to update 'state', 
+  //    but we don't destroy the DOM.
+  
+  const stepContainer = document.getElementById("wizard-step-container");
+  const currentRenderedStep = stepContainer.dataset.step;
+  
+  if (currentRenderedStep !== String(state.step)) {
+    stepContainer.innerHTML = renderStep();
+    stepContainer.dataset.step = state.step;
+    wireStepEvents(stepContainer); // Re-attach events for new step
+  }
+
+  // Update Summary (always safe to re-render)
+  renderSummaryOnly();
+}
+
+function renderSummaryOnly() {
+  const container = document.getElementById("summary-container");
+  if (container) {
+    container.innerHTML = renderSummary();
+  }
 }
 
 const TOTAL_STEPS = 9;
@@ -224,26 +293,16 @@ function renderHeader() {
 
 function renderStep() {
   switch (state.step) {
-    case 1:
-      return renderStep1_Grunddata(); 
-    case 2:
-      return renderStep2_Ytskikt();
-    case 3:
-      return renderStep3_Snickeri();
-    case 4:
-      return renderStep4_Inredning();
-    case 5:
-      return renderStep5_Rivning();
-    case 6:
-      return renderStep6_VVS();
-    case 7:
-      return renderStep7_Maskiner();
-    case 8:
-      return renderStep8_El();
-    case 9:
-      return renderStep9_Pris();
-    default:
-      return "";
+    case 1: return renderStep1_Grunddata(); 
+    case 2: return renderStep2_Ytskikt();
+    case 3: return renderStep3_Snickeri();
+    case 4: return renderStep4_Inredning();
+    case 5: return renderStep5_Rivning();
+    case 6: return renderStep6_VVS();
+    case 7: return renderStep7_Maskiner();
+    case 8: return renderStep8_El();
+    case 9: return renderStep9_Pris();
+    default: return "";
   }
 }
 
@@ -341,7 +400,6 @@ function renderStep1_Grunddata() {
   `;
 }
 
-// --- Step 2 – Ytskikt ---
 function renderStep2_Ytskikt() {
   return `
     <section class="card">
@@ -366,20 +424,17 @@ function renderStep2_Ytskikt() {
   `;
 }
 
-// --- Step 3 – Snickeri ---
 function renderStep3_Snickeri() {
   return `
     <section class="card">
       <h2>3. Snickeri (Dörrar & Tröskel)</h2>
       <p class="muted">Behöver dörr, karm eller tröskel åtgärdas?</p>
-      
       <div class="grid grid-2">
         ${pillGroup("Ny tröskel", "ny_troskel", YES_NO)}
         ${pillGroup("Byta dörrblad", "byta_dorrblad", YES_NO)}
         ${pillGroup("Byta karm + dörr", "byta_karm_dorr", YES_NO)}
         ${pillGroup("Slipning dörr", "slipning_dorr", YES_NO)}
       </div>
-
       <div class="actions">
         <button class="btn btn-ghost" data-prev>Tillbaka</button>
         <button class="btn btn-primary" data-next>Nästa steg</button>
@@ -388,19 +443,16 @@ function renderStep3_Snickeri() {
   `;
 }
 
-// --- Step 4 – Inredning ---
 function renderStep4_Inredning() {
   return `
     <section class="card">
       <h2>4. Inredning & Tak</h2>
       <p class="muted">Fast inredning som skåp och bänkskivor.</p>
-      
       <div class="grid grid-2">
         ${pillGroup("Bänkskiva ovan TM/TT", "bankskiva_ovan_tm_tt", YES_NO)}
         ${pillGroup("Väggskåp", "vaggskap", YES_NO)}
         ${pillGroup("Nytt innertak", "nytt_innertak", YES_NO)}
       </div>
-
       <div class="actions">
         <button class="btn btn-ghost" data-prev>Tillbaka</button>
         <button class="btn btn-primary" data-next>Nästa steg</button>
@@ -409,18 +461,15 @@ function renderStep4_Inredning() {
   `;
 }
 
-// --- Step 5 – Rivning & Väggar ---
 function renderStep5_Rivning() {
   return `
     <section class="card">
       <h2>5. Rivning & Nya Väggar</h2>
       <p class="muted">Ska befintliga väggar rivas eller nya byggas?</p>
-      
       <div class="grid grid-2">
         ${pillGroup("Rivning av väggar (antal)", "rivning_vaggar", ["0", "1", "2", "3", "4"])}
         ${pillGroup("Nya väggar (material)", "nya_vaggar_material", ["Nej / bestäms senare", "Lättvägg", "Massiv"])}
       </div>
-
       <div class="actions">
         <button class="btn btn-ghost" data-prev>Tillbaka</button>
         <button class="btn btn-primary" data-next>Nästa steg</button>
@@ -429,13 +478,11 @@ function renderStep5_Rivning() {
   `;
 }
 
-// --- Step 6 – VVS ---
 function renderStep6_VVS() {
   return `
     <section class="card">
       <h2>6. VVS (Rör & Installationer)</h2>
       <p class="muted">Välj VVS-installationer.</p>
-      
       <div class="grid grid-2">
         ${pillGroup("Dolda rör (enbart arbete)", "dolda_ror", YES_NO)}
         ${pillGroup("WC", "wc", WC_OPTS)}
@@ -447,7 +494,6 @@ function renderStep6_VVS() {
         ${pillGroup("Tvättställ / kommod", "tvattstall_kommod", ["Kommod utan el", "Med el / special"])}
         ${pillGroup("Inkläkat badkar", "inklakat_badkar", YES_NO)}
       </div>
-
       <div class="actions">
         <button class="btn btn-ghost" data-prev>Tillbaka</button>
         <button class="btn btn-primary" data-next>Nästa steg</button>
@@ -456,13 +502,11 @@ function renderStep6_VVS() {
   `;
 }
 
-// --- Step 7 – Maskiner & Värme ---
 function renderStep7_Maskiner() {
   return `
     <section class="card">
       <h2>7. Maskiner & Värme</h2>
       <p class="muted">Värme och anslutning av maskiner.</p>
-      
       <div class="grid grid-2">
         ${pillGroup("Tvättmaskin", "tvattmaskin", YES_NO)}
         ${pillGroup("Torktumlare", "torktumlare", YES_NO)}
@@ -471,7 +515,6 @@ function renderStep7_Maskiner() {
         ${pillGroup("Golvvärme", "golvvärme", YES_NO)}
         ${pillGroup("Handdukstork", "handdukstork", YES_NO)}
       </div>
-
       <div class="actions">
         <button class="btn btn-ghost" data-prev>Tillbaka</button>
         <button class="btn btn-primary" data-next>Nästa steg</button>
@@ -480,13 +523,11 @@ function renderStep7_Maskiner() {
   `;
 }
 
-// --- Step 8 – El ---
 function renderStep8_El() {
   return `
     <section class="card">
       <h2>8. El & Belysning</h2>
       <p class="muted">Välj typ av belysning.</p>
-      
       <div class="grid grid-2">
         ${pillGroup("Takbelysning", "takbelysning", TAKBELYSNING_OPTS)}
         <div class="field">
@@ -494,7 +535,6 @@ function renderStep8_El() {
           <input type="number" min="0" step="1" data-field="spotlight_antal" value="${state.spotlight_antal}">
         </div>
       </div>
-
       <div class="actions">
         <button class="btn btn-ghost" data-prev>Tillbaka</button>
         <button class="btn btn-primary" data-next>Nästa steg</button>
@@ -503,40 +543,31 @@ function renderStep8_El() {
   `;
 }
 
-// --- Step 9 – Beräkna pris ---
 function renderStep9_Pris() {
   const { loading, error, priceResult } = state;
 
   return `
     <section class="card">
-      <h2>9. Beräkna pris</h2>
-      <p>Nu kan du beräkna ett preliminärt pris baserat på dina val.</p>
+      <h2>9. Spara & Skicka</h2>
+      <p>Kontrollera uppgifterna nedan. Priset ser du i summeringen till höger.</p>
 
       ${error ? `<div class="alert alert-error">${escapeHtml(error)}</div>` : ""}
-
-      <div class="actions">
-        <button class="btn btn-ghost" data-prev>Tillbaka</button>
-        <button class="btn btn-primary" data-calc ${loading ? "disabled" : ""}>
-          ${loading ? "Beräknar..." : "Beräkna pris"}
-        </button>
-      </div>
 
       ${
         priceResult && priceResult.ok
           ? `
             <div class="price-result">
-              <h3>Preliminärt totalpris</h3>
-              <p class="price">${formatKr(priceResult.pris_totalt_ink_moms)}</p>
-              <ul class="price-breakdown">
-                <li><strong>Arbete exkl. moms:</strong> ${formatKr(priceResult.pris_arbete_ex_moms)}</li>
-                <li><strong>Grundmaterial exkl. moms:</strong> ${formatKr(priceResult.pris_grundmaterial_ex_moms)}</li>
-                <li><strong>Resekostnad exkl. moms:</strong> ${formatKr(priceResult.pris_resekostnad_ex_moms)}</li>
-              </ul>
-              <p class="muted">Säljare från Jobryan kontaktar dig för att gå igenom detaljer och ta fram en skarp offert.</p>
+              <h3>Preliminärt totalpris: ${formatKr(priceResult.pris_totalt_ink_moms)}</h3>
+              <p class="muted">Specifikation skickas till e-post vid bekräftelse.</p>
             </div>
           `
           : ""
       }
+
+      <div class="actions">
+        <button class="btn btn-ghost" data-prev>Tillbaka</button>
+        <button class="btn btn-primary" onclick="alert('Offert sparad!')">Skicka offert</button>
+      </div>
     </section>
   `;
 }
@@ -545,36 +576,26 @@ function renderStep9_Pris() {
 
 function pillGroup(label, field, options) {
   const value = String(state[field] ?? "");
-
   return `
     <div class="field field-pills">
       <label>${label}</label>
       <div class="pill-row">
-        ${options
-          .map((opt) => {
+        ${options.map((opt) => {
             const isActive = value === String(opt);
             const includedList = INCLUDED_OPTIONS[field] || [];
             const isIncluded = includedList.includes(String(opt));
             const classes = ["pill"];
-
             if (isActive) {
               classes.push("pill--on");
               if (isIncluded) classes.push("pill--included");
             } else {
               classes.push("pill--off");
             }
-
             return `
-              <button
-                type="button"
-                class="${classes.join(" ")}"
-                data-pill
-                data-field="${field}"
-                data-value="${escapeHtml(String(opt))}">
+              <button type="button" class="${classes.join(" ")}" data-pill data-field="${field}" data-value="${escapeHtml(String(opt))}">
                 ${escapeHtml(String(opt))}
               </button>`;
-          })
-          .join("")}
+          }).join("")}
       </div>
     </div>
   `;
@@ -584,20 +605,42 @@ function pillGroup(label, field, options) {
 
 function renderSummary() {
   const p = state.priceResult;
+  const isLoading = state.loading;
 
-  const selectedOptions = Object.keys(SUMMARY_LABELS)
-    .map(key => {
+  const selectedOptions = Object.keys(SUMMARY_LABELS).map(key => {
       const value = String(state[key]);
       const defaultValue = String(DEFAULT_VALUES[key]);
-      
       if (!value || value === defaultValue) return null;
-      
       const label = SUMMARY_LABELS[key];
       if (value === "Ja") return `<li class="summary-item">${label}</li>`;
-      
       return `<li class="summary-item">${label}: <strong>${escapeHtml(value)}</strong></li>`;
-    })
-    .filter(Boolean);
+    }).filter(Boolean);
+
+  // Show loading state or price
+  let priceHtml = "";
+  if (isLoading) {
+    priceHtml = `
+      <div class="summary-price-box loading">
+         <div class="label">Beräknar pris...</div>
+         <div class="value">...</div>
+      </div>`;
+  } else if (p && p.ok) {
+    priceHtml = `
+      <div class="summary-price-box">
+        <div class="label">Preliminärt totalpris</div>
+        <div class="value">${formatKr(p.pris_totalt_ink_moms)}</div>
+      </div>
+      <small class="muted">Priset är en uppskattning. Skarp offert ges efter besök.</small>
+    `;
+  } else {
+    priceHtml = `
+      <div class="summary-price-box">
+        <div class="label">Preliminärt totalpris</div>
+        <div class="value">–</div>
+      </div>
+      <small class="muted">Fyll i uppgifter för att se pris.</small>
+    `;
+  }
 
   return `
     <aside class="summary card">
@@ -632,19 +675,7 @@ function renderSummary() {
 
       <div class="summary-block">
         <h3>Kostnadsuppdelning</h3>
-        ${
-          p && p.ok
-            ? `
-              <div class="summary-price-box">
-                <div class="label">Preliminärt totalpris</div>
-                <div class="value">${formatKr(p.pris_totalt_ink_moms)}</div>
-              </div>
-              <small class="muted">
-                Priset är en uppskattning. Vi kontaktar dig för en skarp offert.
-              </small>
-            `
-            : `<small class="muted">Priset beräknas i sista steget.</small>`
-        }
+        ${priceHtml}
       </div>
     </aside>
   `;
@@ -653,36 +684,51 @@ function renderSummary() {
 // ---------- WIRING EVENTS ----------
 
 function wireEvents() {
+  // This function is only called once at the start because we now use event delegation
+  // or we re-attach events in the render loop if DOM was destroyed.
+  // In this logic, we rely on 'oninput' and 'onclick' for static elements, 
+  // but step elements are re-rendered. 
+  // Best practice in vanilla JS is to re-attach listeners after render.
   const root = getRoot();
   if (!root) return;
 
-  root.querySelectorAll("input[data-field], select[data-field]").forEach((el) => {
-    el.addEventListener("input", (e) => {
-      const field = e.target.dataset.field;
-      let value = e.target.value;
-      if (e.target.type === "number" || e.target.type === "range") {
+  // We can attach a global listener for data-pill clicks to avoid re-attaching constantly
+  root.addEventListener("click", (e) => {
+    // Pills
+    const pill = e.target.closest("[data-pill]");
+    if (pill) {
+      const field = pill.dataset.field;
+      const value = pill.dataset.value;
+      setState({ [field]: value });
+      return;
+    }
+
+    // Navigation
+    if (e.target.closest("[data-next]")) handleNext();
+    if (e.target.closest("[data-prev]")) handlePrev();
+    
+    // Slider Range (if needed specific logic, but 'input' covers it)
+  });
+
+  root.addEventListener("input", (e) => {
+    const el = e.target;
+    if (el.dataset.field) {
+      const field = el.dataset.field;
+      let value = el.value;
+      if (el.type === "number" || el.type === "range") {
         value = value === "" ? "" : Number(value);
       }
       setState({ [field]: value });
-    });
+    }
   });
+  
+  // Wire events for the first render
+  wireStepEvents(document.getElementById("wizard-step-container"));
+}
 
-  root.querySelectorAll("[data-pill]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const field = btn.dataset.field;
-      const value = btn.dataset.value;
-      setState({ [field]: value });
-    });
-  });
-
-  const nextBtn = root.querySelector("[data-next]");
-  if (nextBtn) nextBtn.addEventListener("click", handleNext);
-
-  const prevBtn = root.querySelector("[data-prev]");
-  if (prevBtn) prevBtn.addEventListener("click", handlePrev);
-
-  const calcBtn = root.querySelector("[data-calc]");
-  if (calcBtn) calcBtn.addEventListener("click", handleCalculate);
+function wireStepEvents(container) {
+  // If we needed specific listeners for the step, we'd add them here.
+  // Since we used delegation on 'root' above, this can be empty or special cases.
 }
 
 function handleNext() {
@@ -697,9 +743,11 @@ function handlePrev() {
   }
 }
 
-async function handleCalculate() {
+async function handleCalculate(isBackground = false) {
   try {
-    setState({ loading: true, error: "" });
+    if (!isBackground) {
+        setState({ loading: true, error: "" });
+    }
 
     const payload = {
       kund_namn: state.kund_namn,
@@ -759,13 +807,16 @@ async function handleCalculate() {
       throw new Error(data.error || "Beräkningen misslyckades");
     }
 
-    setState({ loading: false, priceResult: data });
+    // Update price without re-rendering the whole app (prevents input jump)
+    state.loading = false;
+    state.priceResult = data;
+    renderSummaryOnly(); 
+    
   } catch (err) {
     console.error(err);
-    setState({
-      loading: false,
-      error: err.message || "Något gick fel vid beräkningen"
-    });
+    state.loading = false;
+    state.error = err.message;
+    renderSummaryOnly(); 
   }
 }
 
@@ -783,4 +834,5 @@ function escapeHtml(str) {
   return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+// Init
 document.addEventListener("DOMContentLoaded", render);
