@@ -1,3 +1,4 @@
+/* This code is from the <style> block in your original index.html */
 :root {
   --bg: #f3f4f6;
   --card-bg: #ffffff;
@@ -128,6 +129,7 @@ input:focus, select:focus {
   outline: none;
   cursor: pointer;
   -webkit-appearance: none;
+  margin: 0;
 }
 .slider-range::-webkit-slider-thumb {
   -webkit-appearance: none;
@@ -146,7 +148,7 @@ input:focus, select:focus {
 }
 .slider-number {
   width: 100%;
-  padding: 8px 28px 8px 12px !important; /* Space for 'm²' */
+  padding: 8px 28px 8px 12px !important;
   height: 40px !important;
   text-align: center;
   font-weight: 600;
@@ -246,6 +248,11 @@ input:focus, select:focus {
   border-radius: 16px;
   background: #0f172a;
   color: #f9fafb;
+  transition: opacity 0.2s;
+}
+.summary-price-box.loading {
+  opacity: 0.7;
+  pointer-events: none;
 }
 .price-result .price {
   font-size: 32px;
