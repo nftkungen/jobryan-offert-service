@@ -515,8 +515,10 @@ function renderStep8_El() {
 
 function renderStep9_Pris() {
   const { loading, error, priceResult } = state;
-
-  const displayPrice = formatKr(priceResult?.pris_totalt_ink_moms);
+  
+  // Calculate total if missing
+  const total = calculateTotalFromParts(priceResult);
+  const displayPrice = formatKr(total);
 
   return `
     <section class="card">
@@ -584,7 +586,10 @@ function renderSummary() {
     }).filter(Boolean);
 
   let priceHtml = "";
-  const displayPrice = p ? formatKr(p.pris_totalt_ink_moms) : "–";
+  
+  // Calculate total if missing using the new helper
+  const total = calculateTotalFromParts(p);
+  const displayPrice = formatKr(total);
 
   if (isLoading) {
     priceHtml = `
@@ -770,8 +775,7 @@ async function handleCalculate(isBackground = false) {
 
     const data = await res.json();
 
-    // Log raw data for debugging
-    console.log("Sheet response:", data);
+    console.log("Sheet response:", data); // Keep logging for debug
 
     if (!data.ok) {
       throw new Error(data.error || "Beräkningen misslyckades");
@@ -793,20 +797,45 @@ function selectOptions(list, selected) {
   return list.map(v => `<option value="${escapeHtml(v)}" ${v === selected ? "selected" : ""}>${escapeHtml(v)}</option>`).join("");
 }
 
-// FIX: More robust parser for Swedish/Excel numbers
+// NEW HELPER to calculate total if missing
+function calculateTotalFromParts(p) {
+  if (!p) return null;
+  
+  // If the sheet gave us a total, use it (and try to parse it)
+  if (p.pris_totalt_ink_moms) {
+      // Sometimes sheet returns string "100 000", need to parse it to be safe, 
+      // but formatKr handles strings fine. If it is missing, we go to fallback.
+      // If it is a non-empty string/number, trust it.
+      return p.pris_totalt_ink_moms;
+  }
+
+  // Fallback: Calculate it ourselves
+  const parse = (v) => {
+    if (!v) return 0;
+    // Remove spaces and replace comma with dot
+    const s = String(v).replace(/\s/g, "").replace(/\u00A0/g, "").replace(",", ".");
+    const n = Number(s);
+    return isNaN(n) ? 0 : n;
+  };
+
+  const arbete = parse(p.pris_arbete_ex_moms);
+  const material = parse(p.pris_grundmaterial_ex_moms);
+  const resa = parse(p.pris_resekostnad_ex_moms);
+  const sop = parse(p.pris_sophantering_ex_moms);
+
+  const totalExMoms = arbete + material + resa + sop;
+  const moms = totalExMoms * 0.25;
+  
+  return totalExMoms + moms;
+}
+
 function formatKr(value) {
   if (value == null || value === "") return "–";
   
-  // 1. Convert to string
   let s = String(value);
-  
-  // 2. Remove non-breaking spaces and normal spaces
   s = s.replace(/\s/g, "").replace(/\u00A0/g, "");
-  
-  // 3. Replace decimal comma with dot (if needed for JS parsing)
   s = s.replace(",", ".");
 
-  // 4. Parse
   const n = Number(s);
 
   if (isNaN(n)) {
