@@ -69,7 +69,6 @@ function setState(patch, shouldRender = true) {
   state = { ...state, ...patch };
   if (shouldRender) render();
   else renderSummaryOnly();
-  // NOTE: Removed automatic triggerLivePrice() to fix "stuck" issues.
 }
 
 function render() {
@@ -124,33 +123,40 @@ function renderStep8() { return `<section class="card"><h2>8. El</h2><div class=
 // Step 9: The calculation happens HERE when you click the button
 function renderStep9() {
   const { loading, error, priceResult } = state;
+  const hasPrice = priceResult && priceResult.ok;
   const total = calculateTotalFromParts(priceResult);
   const displayPrice = formatKr(total);
+
+  let content = "";
+
+  if (!hasPrice) {
+    // STATE 1: Show Big Button
+    content = `
+      <p>Kontrollera uppgifterna nedan och klicka på knappen för att hämta pris.</p>
+      ${error ? `<div class="alert alert-error">${escapeHtml(error)}</div>` : ""}
+      <div style="margin: 30px 0;">
+        <button class="btn btn-primary" style="width:100%; padding:15px; font-size:16px; justify-content:center;" onclick="handleCalculate(false)">
+          ${loading ? "Beräknar..." : "Beräkna pris nu"}
+        </button>
+      </div>`;
+  } else {
+    // STATE 2: Show Price
+    content = `
+      <div class="price-result">
+        <h3>Preliminärt totalpris: ${displayPrice}</h3>
+        <p class="muted">Specifikation skickas till e-post vid bekräftelse.</p>
+      </div>
+      <div class="actions">
+        <button class="btn btn-ghost" data-prev>Tillbaka</button>
+        <button class="btn btn-primary" onclick="alert('Offert skickad!')">Skicka offert</button>
+      </div>`;
+  }
 
   return `
     <section class="card">
       <h2>9. Beräkna pris</h2>
-      <p>Kontrollera uppgifterna nedan och klicka på knappen för att hämta pris.</p>
-      
-      ${error ? `<div class="alert alert-error">${escapeHtml(error)}</div>` : ""}
-      
-      ${priceResult && priceResult.ok ? 
-        `<div class="price-result">
-           <h3>Preliminärt totalpris: ${displayPrice}</h3>
-           <p class="muted">Priset är en uppskattning.</p>
-         </div>` 
-        : 
-        `<div class="price-result" style="border:0; padding:0;">
-           <button class="btn btn-primary" style="width:100%; justify-content:center; padding:16px;" onclick="handleCalculate(false)">
-             ${loading ? "Beräknar..." : "Beräkna pris nu"}
-           </button>
-         </div>`
-      }
-
-      <div class="actions">
-        <button class="btn btn-ghost" data-prev>Tillbaka</button>
-        ${priceResult && priceResult.ok ? `<button class="btn btn-primary" onclick="alert('Offert skickad!')">Skicka offert</button>` : ""}
-      </div>
+      ${content}
+      ${!hasPrice ? `<div class="actions"><button class="btn btn-ghost" data-prev>Tillbaka</button></div>` : ""}
     </section>`;
 }
 
@@ -164,9 +170,10 @@ function renderSummary() {
       return `<li class="summary-item">${SUMMARY_LABELS[key]}: <strong>${escapeHtml(val)}</strong></li>`;
   }).filter(Boolean).join("");
   
-  // Show "–" until the final step result is ready
+  // Always show "–" until we have a confirmed result
+  const hasPrice = p && p.ok;
   const total = calculateTotalFromParts(p);
-  const displayPrice = (p && p.ok) ? formatKr(total) : "–";
+  const displayPrice = hasPrice ? formatKr(total) : "–";
 
   return `<aside class="summary card"><div class="summary-header"><h2>Summering</h2><p class="muted">Dina val.</p></div><div class="summary-block"><h3>Fastighet</h3><div class="summary-text">${state.address||"-"}, ${state.era}<br>${state.floor}, hiss: ${state.elevator}</div></div><div class="summary-block"><h3>Badrum</h3><div class="summary-text">Golv: ${state.kvm_golv} m²</div></div><div class="summary-block"><h3>Tillval</h3><ul class="summary-item-list">${listItems || '<li class="summary-item-empty">Inga valda</li>'}</ul></div><div class="summary-block"><h3>Kostnad</h3><div class="summary-price-box"><div class="label">Preliminärt totalpris</div><div class="value">${displayPrice}</div></div></div></aside>`;
 }
@@ -200,8 +207,7 @@ function wireEvents() {
   const root = getRoot();
   if(!root) return;
   
-  // Attach global calculation handler to window so the button onclick works
-  window.handleCalculate = handleCalculate;
+  window.handleCalculate = handleCalculate; // Make global for button
 
   root.onclick = e => {
     const p = e.target.closest("[data-pill]");
@@ -231,23 +237,18 @@ async function handleCalculate(bg) {
     
     const r = await fetch(API_URL, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload)});
     const data = await r.json();
-    console.log("Sheet data:", data);
     
     if(!data.ok) throw new Error(data.error || "Kunde inte hämta pris.");
     
     state.loading=false; 
     state.priceResult=data;
-    
-    // Force re-render of step 9 to show result
-    document.getElementById("step").innerHTML = renderStep9();
-    renderSummaryOnly();
+    render(); // Re-render to show result in Step 9
     
   } catch(e) {
     console.error(e);
     state.loading=false; 
     state.error=e.message;
-    document.getElementById("step").innerHTML = renderStep9();
-    renderSummaryOnly();
+    render();
   }
 }
 
