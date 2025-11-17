@@ -45,11 +45,31 @@ app.post("/api/estimate/badrum", async (req, res) => {
     if (!url) {
       return res
         .status(500)
-        .json({ ok: false, error: "SHEETS_WEBAPP_URL saknas i miljövariabler." });
+        .json({ ok: false, error: "Serverfel: SHEETS_WEBAPP_URL saknas." });
     }
 
+    // **SANITIZE INPUTS**
+    // Ensure numbers are numbers, not strings or nulls, to prevent Sheet errors.
+    const raw = req.body || {};
+    const cleanData = {
+      ...raw,
+      zon: Number(raw.zon) || 0,
+      kvm_golv: Number(raw.kvm_golv) || 0,
+      kvm_vagg: Number(raw.kvm_vagg) || 0,
+      takhojd: Number(raw.takhojd) || 0,
+      rivning_vaggar: Number(raw.rivning_vaggar) || 0,
+      gerade_horn_meter: Number(raw.gerade_horn_meter) || 0,
+      fyll_i_antal_meter: Number(raw.fyll_i_antal_meter) || 0,
+      spotlight_antal: Number(raw.spotlight_antal) || 0,
+      
+      // Ensure text fields are at least empty strings, never null/undefined
+      microcement_golv: raw.microcement_golv || "Nej",
+      microcement_vagg: raw.microcement_vagg || "Nej",
+      // ... (add other critical fields if your sheet is picky)
+    };
+
     const body = {
-      contents: JSON.stringify(req.body || {}),
+      contents: JSON.stringify(cleanData),
     };
 
     const r = await fetch(url, {
@@ -59,10 +79,17 @@ app.post("/api/estimate/badrum", async (req, res) => {
     });
 
     const data = await r.json();
+    
+    // Validate response from Sheet
+    if (!data || (!data.ok && !data.pris_totalt_ink_moms)) {
+        console.error("Sheet returned invalid data:", data);
+        return res.json({ ok: false, error: "Kunde inte beräkna pris (Google Sheet-fel)." });
+    }
+
     return res.json(data);
   } catch (err) {
     console.error("Estimate error:", err);
-    return res.status(500).json({ ok: false, error: "proxy_failed" });
+    return res.status(500).json({ ok: false, error: "Nätverksfel mot kalkylservern." });
   }
 });
 
@@ -74,7 +101,7 @@ app.post("/api/send-offer", async (req, res) => {
     if (!contact || !estimate) {
       return res
         .status(400)
-        .json({ ok: false, error: "contact eller estimate saknas." });
+        .json({ ok: false, error: "Kontaktuppgifter eller pris saknas." });
     }
 
     const {
@@ -89,7 +116,7 @@ app.post("/api/send-offer", async (req, res) => {
     if (!SMTP_HOST || !FROM_EMAIL || !SALES_EMAIL) {
       return res.status(500).json({
         ok: false,
-        error: "SMTP_HOST / FROM_EMAIL / SALES_EMAIL saknas i miljövariabler.",
+        error: "Serverfel: Email-konfiguration saknas.",
       });
     }
 
@@ -175,7 +202,7 @@ app.post("/api/send-offer", async (req, res) => {
     return res.json({ ok: true });
   } catch (err) {
     console.error("send-offer error:", err);
-    return res.status(500).json({ ok: false, error: "send_offer_failed" });
+    return res.status(500).json({ ok: false, error: "Kunde inte skicka email." });
   }
 });
 
