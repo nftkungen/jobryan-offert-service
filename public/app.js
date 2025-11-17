@@ -1,4 +1,4 @@
-// ===== Jobryan Offert Wizard – Badrum =====
+// ===== Jobryan Offert Wizard – Badrum (Manuell knapp) =====
 
 const API_URL = "/api/estimate/badrum";
 
@@ -136,7 +136,7 @@ function renderStep9() {
       ${error ? `<div class="alert alert-error">${escapeHtml(error)}</div>` : ""}
       <div style="margin: 30px 0;">
         <button class="btn btn-primary" style="width:100%; padding:15px; font-size:16px; justify-content:center;" onclick="handleCalculate(false)">
-          ${loading ? "Beräknar..." : "Beräkna pris nu"}
+          ${loading ? "Beräknar..." : "Hämta pris nu"}
         </button>
       </div>`;
   } else {
@@ -212,8 +212,8 @@ function wireEvents() {
   root.onclick = e => {
     const p = e.target.closest("[data-pill]");
     if(p) setState({[p.dataset.field]: p.dataset.value}, true);
-    if(e.target.closest("[data-next]")) { if(state.step<9) setState({step:state.step+1}, true); }
-    if(e.target.closest("[data-prev]")) { if(state.step>1) setState({step:state.step-1}, true); }
+    if(e.target.closest("[data-next]")) { if(state.step<9) setState({step:state.step+1, priceResult: null, error: ""}, true); } // Reset price on nav
+    if(e.target.closest("[data-prev]")) { if(state.step>1) setState({step:state.step-1, priceResult: null, error: ""}, true); } // Reset price on nav
   };
   root.oninput = e => {
     const t = e.target;
