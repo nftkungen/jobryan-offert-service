@@ -1,4 +1,3 @@
-/* This code is from the <style> block in your original index.html */
 :root {
   --bg: #f3f4f6;
   --card-bg: #ffffff;
@@ -19,13 +18,12 @@
 
 * {
   box-sizing: border-box;
-  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", sans-serif;
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 body {
   margin: 0;
-  padding: 32px;
+  padding: 20px;
   background: radial-gradient(circle at top left, #eef2ff, #f9fafb 55%);
   color: var(--text-main);
 }
@@ -35,7 +33,7 @@ body {
   margin: 0 auto;
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(320px, 1.1fr);
-  gap: 28px;
+  gap: 24px;
   align-items: flex-start;
 }
 
@@ -43,10 +41,10 @@ body {
   background: var(--card-bg);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-soft);
-  padding: 24px 28px 26px;
+  padding: 24px;
 }
 
-/* Wizard styles from app.js */
+/* Header */
 .wizard-header {
   display: flex;
   justify-content: space-between;
@@ -59,7 +57,7 @@ body {
   margin: 0;
 }
 .wizard-header .subtitle {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-muted);
   margin-top: 4px;
   margin-bottom: 0;
@@ -68,148 +66,149 @@ body {
   font-size: 13px;
   color: var(--text-muted);
 }
-.card h2 {
-  font-size: 16px;
-  font-weight: 600;
-  margin-top: 0;
-  margin-bottom: 16px;
-}
-.card p.muted {
-  font-size: 13px;
-  color: var(--text-muted);
-  margin-bottom: 20px;
-  margin-top: -10px;
-}
+
+/* Form Grid */
 .grid {
   display: grid;
-  gap: 14px 18px;
+  gap: 16px;
 }
 .grid-2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+
 .field {
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 .field label {
   display: block;
-  font-size: 13px;
-  font-weight: 500;
-  margin-bottom: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #374151;
 }
-.field .help {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-top: 2px;
-}
+
+/* Touch-friendly Inputs (App feel) */
 input[type="text"],
 input[type="email"],
 input[type="number"],
 select {
   width: 100%;
-  padding: 9px 11px;
-  border-radius: 10px;
+  padding: 12px 14px; /* Larger touch target */
+  border-radius: 12px;
   border: 1px solid var(--border-subtle);
-  font-size: 13px;
+  font-size: 16px; /* Prevents zoom on iOS */
   outline: none;
   background: #f9fafb;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease,
-    background 0.15s ease;
-  box-sizing: border-box; /* Added for consistency */
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+  height: 48px; /* Consistent height */
 }
-input[type="text"]:focus,
-input[type="email"]:focus,
-input[type="number"]:focus,
-select:focus {
+input:focus, select:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.4);
   background: #ffffff;
+  box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.4);
 }
-input[type="range"] {
-  width: 100%;
+
+/* New Slider Layout */
+.slider-container {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #f9fafb;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
 }
-.field-slider {
+
+.slider-range {
+  flex: 1;
+  height: 6px;
+  border-radius: 99px;
+  background: #e5e7eb;
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+}
+.slider-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.slider-input-wrap {
   position: relative;
+  width: 100px;
 }
-.slider-value {
-  position: absolute;
-  top: 24px;
-  right: 0;
-  padding: 5px 11px;
-  border-radius: 999px;
-  font-size: 12px;
-  background: var(--accent-soft);
-  color: var(--accent-strong);
+.slider-number {
+  width: 100%;
+  padding: 8px 28px 8px 12px !important; /* Space for 'm²' */
+  height: 40px !important;
+  text-align: center;
   font-weight: 600;
-  white-space: nowrap;
+  background: white !important;
+  border-color: #e5e7eb !important;
 }
+.slider-input-wrap .suffix {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 13px;
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+/* Buttons */
 .actions {
-  margin-top: 22px;
+  margin-top: 28px;
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 12px;
 }
 .btn {
   border-radius: 999px;
-  padding: 8px 18px;
-  font-size: 13px;
+  padding: 12px 24px; /* Larger touch target */
+  font-size: 15px;
+  font-weight: 500;
   border: 0;
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  transition: transform 0.12s ease, box-shadow 0.12s ease,
-    background 0.12s ease;
+  transition: transform 0.1s ease, background 0.2s;
+}
+.btn:active {
+  transform: scale(0.98);
 }
 .btn-primary {
   background: var(--accent);
   color: #ffffff;
-  box-shadow: 0 10px 22px rgba(249, 115, 22, 0.35);
-}
-.btn-primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 30px rgba(249, 115, 22, 0.45);
-}
-.btn-primary:disabled {
-  background: #f3f4f6;
-  color: #9ca3af;
-  cursor: not-allowed;
-  box-shadow: none;
-  transform: none;
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.25);
 }
 .btn-ghost {
   background: #f3f4f6;
   color: var(--text-main);
 }
-.btn-ghost:hover {
-  background: #e5e7eb;
-}
 
-/* Pill buttons generated from app.js */
-.field-pills {
-  grid-column: 1 / -1;
-}
+/* Pills */
+.field-pills { grid-column: 1 / -1; }
 .pill-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 3px;
+  gap: 8px;
+  margin-top: 4px;
 }
 .pill {
   border-radius: var(--radius-pill);
-  padding: 6px 10px;
-  font-size: 12px;
+  padding: 10px 16px; /* Larger touch target */
+  font-size: 14px;
   border: 1px solid transparent;
   background: var(--pill-bg);
   color: var(--text-main);
   cursor: pointer;
-  transition: background 0.12s ease, border-color 0.12s ease,
-    color 0.12s ease, transform 0.08s ease;
-  white-space: nowrap;
-}
-.pill:hover {
-  transform: translateY(-0.5px);
-  background: #e5e7eb;
+  transition: all 0.15s ease;
 }
 .pill--on {
   background: var(--pill-bg-active);
@@ -217,186 +216,50 @@ input[type="range"] {
   color: var(--pill-text-active);
   font-weight: 600;
 }
-.pill--on.pill--included {
-   background: var(--pill-bg-active);
-   border-color: var(--pill-border-active);
-   color: var(--pill-text-active);
-}
-.pill--off:hover {
-  background: #e5e7eb;
-}
 
-.section-title {
-  font-size: 14px;
-  font-weight: 600;
-  margin-top: 22px;
-  margin-bottom: 12px;
-}
-
-/* Summary card styles */
-.summary h2 {
-  font-size: 17px;
-  font-weight: 600;
-  margin: 0;
-}
-.summary-header {
-  margin-bottom: 10px;
-}
+/* Summary */
 .summary-header .muted {
   font-size: 13px;
   color: var(--text-muted);
+  display: block;
+  margin-top: 4px;
   line-height: 1.4;
-  display: block; /* **FIX** for overlap */
-  margin-top: 4px;  /* **FIX** for overlap */
 }
 .summary-block {
-  margin-top: 12px;
-  padding-top: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
   border-top: 1px dashed #e5e7eb;
 }
-.summary-block:first-of-type {
-  border-top: 0;
-  padding-top: 0;
-}
-.summary-block h3 {
-  font-size: 13px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #9ca3af;
-  margin-top: 0;
-  margin-bottom: 6px;
-}
-.summary-text {
-  font-size: 13px;
-  color: var(--text-main);
-  line-height: 1.5;
-}
-.summary-tags {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 8px;
-  font-size: 12px;
-  color: #374151;
-}
-
-/* New Dynamic Summary List */
 .summary-item-list {
   padding-left: 0;
   margin: 0;
-  list-style-type: none;
-  font-size: 13px;
+  list-style: none;
+  font-size: 14px;
 }
-.summary-item {
-  color: var(--text-main);
-  margin-bottom: 4px;
-}
-.summary-item strong {
-  color: var(--accent-strong);
-  font-weight: 600;
-}
-.summary-item-empty {
-  font-size: 13px;
-  color: var(--text-muted);
-  font-style: italic;
-}
+.summary-item { margin-bottom: 6px; }
+.summary-item strong { color: var(--accent-strong); }
 
-/* Price box */
+/* Price Box */
 .summary-price-box {
-  margin-top: 14px;
-  padding: 10px 12px;
-  border-radius: 14px;
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 16px;
   background: #0f172a;
   color: #f9fafb;
 }
-.summary-price-box .label {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #9ca3af;
-}
-.summary-price-box .value {
-  font-size: 18px;
-  font-weight: 700;
-  margin-top: 4px;
-}
-.summary .muted {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-top: 8px;
-}
-
-/* Price result in step 10 */
-.alert {
-  padding: 12px;
-  border-radius: 10px;
-  font-size: 13px;
-  margin-top: 16px;
-}
-.alert-error {
-  background: #fee2e2;
-  color: #991b1b;
-  border: 1px solid #fca5a5;
-}
-.price-result {
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid var(--border-subtle);
-}
-.price-result h3 {
-  margin: 0;
-  font-size: 15px;
-}
 .price-result .price {
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 700;
   color: var(--accent);
-  margin: 4px 0;
-}
-.price-breakdown {
-  font-size: 13px;
-  padding-left: 18px;
-  margin-bottom: 14px;
+  margin: 8px 0;
 }
 
-/* Responsive styles */
+/* Mobile / Tablet Responsive */
 @media (max-width: 1100px) {
-  body {
-    padding: 18px;
-  }
-  .layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .card {
-    padding: 18px 18px 22px;
-  }
-  .wizard-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
-  .actions {
-    justify-content: space-between;
-  }
-  .field-pills {
-    grid-column: 1 / -1; /* Ensure pills stack */
-  }
-  .grid-2 {
-    grid-template-columns: minmax(0, 1fr); /* Stack grid items */
-  }
-
-  /* **FIX** for slider layout */
-  .field-slider {
-     position: relative; /* Keep this */
-     padding-top: 24px; /* Make space for the pill */
-  }
-  .field-slider .slider-value {
-     top: 0px; /* Move pill to the top */
-     right: 0; /* Keep it right-aligned */
-     /* it's already position: absolute */
-  }
-  .field-slider input[type="range"] {
-     margin-top: 0; /* Remove the old margin */
-  }
+  .layout { grid-template-columns: 1fr; }
+  .wizard-header { flex-direction: column; align-items: flex-start; }
+  .grid-2 { grid-template-columns: 1fr; } /* Single column for touch */
+  .actions { justify-content: space-between; }
+  .btn { flex: 1; } /* Full width buttons on mobile */
+  body { padding: 16px; }
 }
