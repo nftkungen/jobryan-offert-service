@@ -29,14 +29,14 @@ let state = { ...initialState };
 // Lists
 const YES_NO = ["Nej", "Ja"];
 const WC_OPTS = ["Ingen WC", "Golvmonterad WC", "Väggmonterad WC"];
+const TAKBELYSNING_OPTS = ["Standard", "Spotlights"];
+
 const INCLUDED_OPTIONS = {
   duschblandare: ["Standard"], tvattstallsblandare: ["Standard"], tvattstall_kommod: ["Kommod utan el"],
   wc: ["Ingen WC"], brunn: ["Standard"], golvvärme: ["Nej"], handdukstork: ["Nej"],
   takbelysning: ["Standard"], tvattmaskin: ["Nej"], torktumlare: ["Nej"], torkskap: ["Nej"],
   inklakat_badkar: ["Nej"], varme_vp: ["Nej"], dolda_ror: ["Nej"]
 };
-
-const TAKBELYSNING_OPTS = ["Standard", "Spotlights"];
 
 const SUMMARY_LABELS = {
   microcement_golv: "Microcement golv", microcement_vagg: "Microcement vägg", gerade_horn_meter: "Gerade hörn",
@@ -61,14 +61,33 @@ const DEFAULT_VALUES = {
   takbelysning: "Standard", spotlight_antal: "0",
 };
 
+// --- Live Calculation Debouncer ---
+const triggerLivePrice = debounce(() => handleCalculate(true), 1000); // 1 second delay
+function debounce(func, wait) {
+  let timeout;
+  return function(...args) {
+    const context = this;
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(context, args), wait);
+  };
+}
 
-// --- Render ---
+// --- Rendering System ---
 function getRoot() { return document.getElementById("js-root") || document.getElementById("app"); }
 
 function setState(patch, shouldRender = true) {
   state = { ...state, ...patch };
   if (shouldRender) render();
   else renderSummaryOnly();
+
+  // LIVE UPDATE: Trigger calc on every change except internal flags
+  const ignoreFields = ["loading", "error", "priceResult", "step"];
+  const hasChanges = Object.keys(patch).some(k => !ignoreFields.includes(k));
+  if (hasChanges) {
+    state.loading = true;
+    renderSummaryOnly(); 
+    triggerLivePrice();
+  }
 }
 
 function render() {
@@ -108,7 +127,7 @@ function renderStep() {
   }
 }
 
-// Steps
+// --- Steps UI ---
 function renderStep1() {
   return `<section class="card"><h2>1. Grunddata & Fastighet</h2><h3 class="section-title" style="margin-top:0;">Kontakt</h3><div class="grid grid-2">${inp("Namn", "kund_namn")} ${inp("Telefon", "kund_tel")} ${inp("E-post", "kund_email", "email")}${inp("Adress", "address")} ${inp("Postnummer", "postnummer")}<div class="field"><label>Zon</label><select data-field="zon">${opts(["1", "2", "3", "4"], state.zon)}</select></div></div><h3 class="section-title">Fastighet</h3><div class="grid grid-2"><div class="field"><label>Fastighetstyp</label><select data-field="propertyType">${opts(["Villa", "Lägenhet", "Radhus"], state.propertyType)}</select></div><div class="field"><label>Era</label><select data-field="era">${opts(["20-tal", "30-tal", "40-tal", "50-tal", "60-tal", "70-tal", "80-tal", "90-tal", "2000-tal"], state.era)}</select></div><div class="field"><label>Våning</label><select data-field="floor">${opts(["BV", "1 tr", "2 tr", "3 tr", "4 tr", "5 tr+"], state.floor)}</select></div><div class="field"><label>Hiss</label><select data-field="elevator">${opts(["Ingen", "Liten", "Stor"], state.elevator)}</select></div><div class="field" style="grid-column:1/-1;"><label>Storlek (golvyta)</label><div class="slider-container"><input type="range" min="2" max="20" step="0.5" data-field="kvm_golv" value="${state.kvm_golv}" class="slider-range"><div class="slider-input-wrap"><input type="number" data-field="kvm_golv" value="${state.kvm_golv}" class="slider-number"><span class="suffix">m²</span></div></div></div>${inp("Väggyta (m²)", "kvm_vagg", "number")} ${inp("Takhöjd (m)", "takhojd", "number")}</div><div class="actions"><button class="btn btn-primary" data-next>Nästa steg</button></div></section>`;
 }
@@ -120,48 +139,28 @@ function renderStep6() { return `<section class="card"><h2>6. VVS</h2><div class
 function renderStep7() { return `<section class="card"><h2>7. Maskiner</h2><div class="grid grid-2">${pill("Tvättmaskin", "tvattmaskin", YES_NO)}${pill("Torktumlare", "torktumlare", YES_NO)}${pill("Torkskåp", "torkskap", YES_NO)}${pill("Värmepump", "varme_vp", YES_NO)}${pill("Golvvärme", "golvvärme", YES_NO)}${pill("Handdukstork", "handdukstork", YES_NO)}</div><div class="actions"><button class="btn btn-ghost" data-prev>Tillbaka</button><button class="btn btn-primary" data-next>Nästa steg</button></div></section>`; }
 function renderStep8() { return `<section class="card"><h2>8. El</h2><div class="grid grid-2">${pill("Takbelysning", "takbelysning", TAKBELYSNING_OPTS)}${inp("Spotlight antal", "spotlight_antal", "number")}</div><div class="actions"><button class="btn btn-ghost" data-prev>Tillbaka</button><button class="btn btn-primary" data-next>Nästa steg</button></div></section>`; }
 
-// Step 9: The calculation happens HERE when you click the button
 function renderStep9() {
-  const { loading, error, priceResult } = state;
-  const hasPrice = priceResult && priceResult.ok;
-  const total = calculateTotalFromParts(priceResult);
-  const displayPrice = formatKr(total);
-
-  let content = "";
-
-  if (!hasPrice) {
-    // STATE 1: Show Big Button
-    content = `
-      <p>Kontrollera uppgifterna nedan och klicka på knappen för att hämta pris.</p>
-      ${error ? `<div class="alert alert-error">${escapeHtml(error)}</div>` : ""}
-      <div style="margin: 30px 0;">
-        <button class="btn btn-primary" style="width:100%; padding:15px; font-size:16px; justify-content:center;" onclick="handleCalculate(false)">
-          ${loading ? "Beräknar..." : "Beräkna pris nu"}
-        </button>
-      </div>`;
-  } else {
-    // STATE 2: Show Price
-    content = `
-      <div class="price-result">
-        <h3>Preliminärt totalpris: ${displayPrice}</h3>
-        <p class="muted">Specifikation skickas till e-post vid bekräftelse.</p>
-      </div>
-      <div class="actions">
-        <button class="btn btn-ghost" data-prev>Tillbaka</button>
-        <button class="btn btn-primary" onclick="alert('Offert skickad!')">Skicka offert</button>
-      </div>`;
-  }
-
+  const { priceResult } = state;
+  const total = priceResult?.cost_total ? formatKr(priceResult.cost_total) : "–";
+  
   return `
     <section class="card">
-      <h2>9. Beräkna pris</h2>
-      ${content}
-      ${!hasPrice ? `<div class="actions"><button class="btn btn-ghost" data-prev>Tillbaka</button></div>` : ""}
+      <h2>9. Spara & Skicka</h2>
+      <p>Kontrollera uppgifterna nedan. Priset ser du i summeringen till höger.</p>
+      <div class="price-result">
+        <h3>Preliminärt totalpris: ${total}</h3>
+        <p class="muted">Specifikation skickas till e-post vid bekräftelse.</p>
+      </div>
+      <div class="actions"><button class="btn btn-ghost" data-prev>Tillbaka</button><button class="btn btn-primary" onclick="alert('Offert sparad!')">Skicka offert</button></div>
     </section>`;
 }
 
+// --- THE NEW SUMMARY: LIVE BREAKDOWN ---
 function renderSummary() {
-  const p = state.priceResult;
+  const p = state.priceResult || {};
+  const isLoading = state.loading;
+
+  // Selected Options List
   const listItems = Object.keys(SUMMARY_LABELS).map(key => {
       const val = String(state[key]);
       const def = String(DEFAULT_VALUES[key]);
@@ -169,37 +168,44 @@ function renderSummary() {
       if(val === "Ja") return `<li class="summary-item">${SUMMARY_LABELS[key]}</li>`;
       return `<li class="summary-item">${SUMMARY_LABELS[key]}: <strong>${escapeHtml(val)}</strong></li>`;
   }).filter(Boolean).join("");
-  
-  // Always show "–" until we have a confirmed result
-  const hasPrice = p && p.ok;
-  const total = calculateTotalFromParts(p);
-  const displayPrice = hasPrice ? formatKr(total) : "–";
 
-  return `<aside class="summary card"><div class="summary-header"><h2>Summering</h2><p class="muted">Dina val.</p></div><div class="summary-block"><h3>Fastighet</h3><div class="summary-text">${state.address||"-"}, ${state.era}<br>${state.floor}, hiss: ${state.elevator}</div></div><div class="summary-block"><h3>Badrum</h3><div class="summary-text">Golv: ${state.kvm_golv} m²</div></div><div class="summary-block"><h3>Tillval</h3><ul class="summary-item-list">${listItems || '<li class="summary-item-empty">Inga valda</li>'}</ul></div><div class="summary-block"><h3>Kostnad</h3><div class="summary-price-box"><div class="label">Preliminärt totalpris</div><div class="value">${displayPrice}</div></div></div></aside>`;
+  // Price Table
+  let priceContent = "";
+  if (isLoading) {
+    priceContent = `<div class="summary-price-box loading"><div class="label">Uppdaterar pris...</div><div class="value">...</div></div>`;
+  } else if (p.cost_total) {
+    // FULL BREAKDOWN TABLE
+    priceContent = `
+      <div style="font-size:13px; margin-bottom:12px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span>Arbetskostnad:</span> <span>${formatKr(p.cost_work)}</span></div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span>Material:</span> <span>${formatKr(p.cost_material)}</span></div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span>Resa & Sop:</span> <span>${formatKr(p.cost_travel)}</span></div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:4px; color:#16a34a;"><span>ROT-avdrag:</span> <span>${formatKr(p.cost_rot)}</span></div>
+      </div>
+      <div class="summary-price-box">
+        <div class="label">Preliminärt totalpris</div>
+        <div class="value">${formatKr(p.cost_total)}</div>
+      </div>
+    `;
+  } else {
+    priceContent = `<div class="summary-price-box"><div class="label">Preliminärt totalpris</div><div class="value">–</div></div><small class="muted">Priset uppdateras automatiskt.</small>`;
+  }
+
+  return `
+    <aside class="summary card">
+      <div class="summary-header"><h2>Summering</h2><p class="muted">Dina val.</p></div>
+      <div class="summary-block"><h3>Fastighet</h3><div class="summary-text">${state.address||"-"}, ${state.era}<br>${state.floor}, hiss: ${state.elevator}</div></div>
+      <div class="summary-block"><h3>Badrum</h3><div class="summary-text">Golv: ${state.kvm_golv} m²</div></div>
+      <div class="summary-block"><h3>Tillval</h3><ul class="summary-item-list">${listItems || '<li class="summary-item-empty">Inga valda</li>'}</ul></div>
+      <div class="summary-block"><h3>Kostnad</h3>${priceContent}</div>
+    </aside>`;
 }
 
-// Helper Utils
+// Utils
 function inp(lbl, field, type="text") { return `<div class="field"><label>${lbl}</label><input type="${type}" data-field="${field}" value="${escapeHtml(state[field])}"></div>`; }
 function opts(arr, sel) { return arr.map(v => `<option value="${escapeHtml(v)}" ${v===sel?"selected":""}>${escapeHtml(v)}</option>`).join(""); }
 function pill(lbl, field, optsArr) { return `<div class="field field-pills"><label>${lbl}</label><div class="pill-row">${optsArr.map(o => { const active = String(state[field]) === String(o); const included = INCLUDED_OPTIONS[field]?.includes(String(o)); return `<button type="button" class="pill ${active?(included?"pill--on pill--included":"pill--on"):"pill--off"}" data-pill data-field="${field}" data-value="${escapeHtml(String(o))}">${escapeHtml(String(o))}</button>`; }).join("")}</div></div>`; }
-
-// Logic
-function calculateTotalFromParts(p) {
-  if (!p || !p.ok) return null;
-  const parse = v => { if (!v) return 0; const s = String(v).replace(/\s| /g, "").replace(",", "."); const n = Number(s); return isNaN(n) ? 0 : n; };
-  if (p.pris_totalt_ink_moms) { const t = parse(p.pris_totalt_ink_moms); if (t > 0) return t; }
-  const arb = parse(p.pris_arbete_ex_moms);
-  const mat = parse(p.pris_grundmaterial_ex_moms);
-  const res = parse(p.pris_resekostnad_ex_moms);
-  const sop = parse(p.pris_sophantering_ex_moms);
-  const sumEx = arb + mat + res + sop;
-  return sumEx === 0 ? null : sumEx * 1.25;
-}
-
-function formatKr(num) {
-  if (num == null) return "–";
-  return Math.round(num).toLocaleString("sv-SE") + " kr";
-}
+function formatKr(num) { if (num == null || num === "") return "–"; return Math.round(Number(num)).toLocaleString("sv-SE") + " kr"; }
 function escapeHtml(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 
 // Events
@@ -207,8 +213,6 @@ function wireEvents() {
   const root = getRoot();
   if(!root) return;
   
-  window.handleCalculate = handleCalculate; // Make global for button
-
   root.onclick = e => {
     const p = e.target.closest("[data-pill]");
     if(p) setState({[p.dataset.field]: p.dataset.value}, true);
@@ -230,25 +234,20 @@ function wireEvents() {
 }
 
 async function handleCalculate(bg) {
-  setState({loading:true, error:""}, true);
   try {
     const payload = { ...state }; 
     delete payload.loading; delete payload.error; delete payload.priceResult; delete payload.step;
-    
     const r = await fetch(API_URL, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload)});
     const data = await r.json();
-    
-    if(!data.ok) throw new Error(data.error || "Kunde inte hämta pris.");
-    
-    state.loading=false; 
-    state.priceResult=data;
-    render(); // Re-render to show result in Step 9
-    
+    if(data.ok) {
+        state.loading=false; 
+        state.priceResult=data;
+        renderSummaryOnly();
+        if(state.step === 9) document.getElementById("step").innerHTML = renderStep9();
+    }
   } catch(e) {
+    state.loading=false;
     console.error(e);
-    state.loading=false; 
-    state.error=e.message;
-    render();
   }
 }
 
