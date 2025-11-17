@@ -29,14 +29,14 @@ let state = { ...initialState };
 // Lists
 const YES_NO = ["Nej", "Ja"];
 const WC_OPTS = ["Ingen WC", "Golvmonterad WC", "Väggmonterad WC"];
+const TAKBELYSNING_OPTS = ["Standard", "Spotlights"];
+
 const INCLUDED_OPTIONS = {
   duschblandare: ["Standard"], tvattstallsblandare: ["Standard"], tvattstall_kommod: ["Kommod utan el"],
   wc: ["Ingen WC"], brunn: ["Standard"], golvvärme: ["Nej"], handdukstork: ["Nej"],
   takbelysning: ["Standard"], tvattmaskin: ["Nej"], torktumlare: ["Nej"], torkskap: ["Nej"],
   inklakat_badkar: ["Nej"], varme_vp: ["Nej"], dolda_ror: ["Nej"]
 };
-
-const TAKBELYSNING_OPTS = ["Standard", "Spotlights"];
 
 const SUMMARY_LABELS = {
   microcement_golv: "Microcement golv", microcement_vagg: "Microcement vägg", gerade_horn_meter: "Gerade hörn",
@@ -69,7 +69,6 @@ function setState(patch, shouldRender = true) {
   state = { ...state, ...patch };
   if (shouldRender) render();
   else renderSummaryOnly();
-  // NOTE: Removed automatic triggerLivePrice() to ensure stability.
 }
 
 function render() {
