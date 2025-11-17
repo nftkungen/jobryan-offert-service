@@ -207,7 +207,7 @@ function setState(patch, shouldRender = true) {
 
   if (hasChanges) {
     state.loading = true;
-    renderSummaryOnly(); // Show "Beräknar..." immediately
+    renderSummaryOnly(); 
     triggerLivePrice();
   }
 }
@@ -516,6 +516,8 @@ function renderStep8_El() {
 function renderStep9_Pris() {
   const { loading, error, priceResult } = state;
 
+  const displayPrice = formatKr(priceResult?.pris_totalt_ink_moms);
+
   return `
     <section class="card">
       <h2>9. Spara & Skicka</h2>
@@ -523,16 +525,10 @@ function renderStep9_Pris() {
 
       ${error ? `<div class="alert alert-error">${escapeHtml(error)}</div>` : ""}
 
-      ${
-        priceResult && priceResult.ok
-          ? `
-            <div class="price-result">
-              <h3>Preliminärt totalpris: ${formatKr(priceResult.pris_totalt_ink_moms)}</h3>
-              <p class="muted">Specifikation skickas till e-post vid bekräftelse.</p>
-            </div>
-          `
-          : ""
-      }
+      <div class="price-result">
+        <h3>Preliminärt totalpris: ${displayPrice}</h3>
+        <p class="muted">Specifikation skickas till e-post vid bekräftelse.</p>
+      </div>
 
       <div class="actions">
         <button class="btn btn-ghost" data-prev>Tillbaka</button>
@@ -588,6 +584,8 @@ function renderSummary() {
     }).filter(Boolean);
 
   let priceHtml = "";
+  const displayPrice = p ? formatKr(p.pris_totalt_ink_moms) : "–";
+
   if (isLoading) {
     priceHtml = `
       <div class="summary-price-box loading">
@@ -595,7 +593,6 @@ function renderSummary() {
          <div class="value">...</div>
       </div>`;
   } else if (errorMsg) {
-    // SHOW ERROR HERE
     priceHtml = `
       <div class="summary-price-box" style="background:#7f1d1d;">
          <div class="label">Fel vid beräkning</div>
@@ -603,11 +600,11 @@ function renderSummary() {
       </div>
       <small class="muted">Kontrollera internet eller kontakta support.</small>
     `;
-  } else if (p && p.ok) {
+  } else if (p && p.ok && displayPrice !== "–") {
     priceHtml = `
       <div class="summary-price-box">
         <div class="label">Preliminärt totalpris</div>
-        <div class="value">${formatKr(p.pris_totalt_ink_moms)}</div>
+        <div class="value">${displayPrice}</div>
       </div>
       <small class="muted">Priset är en uppskattning. Skarp offert ges efter besök.</small>
     `;
@@ -686,7 +683,7 @@ function wireEvents() {
       if (el.type === "number" || el.type === "range") {
         value = value === "" ? "" : Number(value);
         
-        // Sync slider visual immediately to avoid delay
+        // Sync slider visual
         if (el.classList.contains("slider-range")) {
            const numInput = el.nextElementSibling.querySelector("input");
            if (numInput) numInput.value = value;
@@ -696,7 +693,6 @@ function wireEvents() {
            if (rangeInput) rangeInput.value = value;
         }
       }
-      // Trigger state update BUT skip full re-render to keep focus
       setState({ [field]: value }, false);
     }
   });
@@ -774,6 +770,9 @@ async function handleCalculate(isBackground = false) {
 
     const data = await res.json();
 
+    // Log raw data for debugging
+    console.log("Sheet response:", data);
+
     if (!data.ok) {
       throw new Error(data.error || "Beräkningen misslyckades");
     }
@@ -794,10 +793,28 @@ function selectOptions(list, selected) {
   return list.map(v => `<option value="${escapeHtml(v)}" ${v === selected ? "selected" : ""}>${escapeHtml(v)}</option>`).join("");
 }
 
+// FIX: More robust parser for Swedish/Excel numbers
 function formatKr(value) {
-  if (value == null || value === "" || isNaN(Number(value))) return "–";
-  const n = Math.round(Number(value));
-  return n.toLocaleString("sv-SE") + " kr";
+  if (value == null || value === "") return "–";
+  
+  // 1. Convert to string
+  let s = String(value);
+  
+  // 2. Remove non-breaking spaces and normal spaces
+  s = s.replace(/\s/g, "").replace(/\u00A0/g, "");
+  
+  // 3. Replace decimal comma with dot (if needed for JS parsing)
+  s = s.replace(",", ".");
+
+  // 4. Parse
+  const n = Number(s);
+
+  if (isNaN(n)) {
+    console.warn("formatKr: Could not parse number:", value);
+    return "–";
+  }
+
+  return Math.round(n).toLocaleString("sv-SE") + " kr";
 }
 
 function escapeHtml(str) {
