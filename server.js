@@ -1,10 +1,11 @@
+// ===== Jobryan Offert Server (Lokal Kalkylator) =====
+
 import express from "express";
 import path from "path";
 import fs from "fs";
 import dotenv from "dotenv";
-import fetch from "node-fetch";
-import nodemailer from "nodemailer";
 import { fileURLToPath } from "url";
+import { calculatePrice } from "./public/calculator.js"; // Importera den nya kalkylatorn
 
 dotenv.config();
 
@@ -17,46 +18,37 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
-// Load price config safely
-let priceConfig = {};
-try {
-  if (fs.existsSync(path.join(__dirname, "price.json"))) {
-    const json = fs.readFileSync(path.join(__dirname, "price.json"), "utf8");
-    priceConfig = JSON.parse(json);
-  }
-} catch (err) {
-  console.error("Warning: Could not read price.json", err.message);
-}
+// Hälso-check
+app.get("/api/ping", (req, res) => {
+  res.json({ ok: true, msg: "pong" });
+});
 
-// Health check
-app.get("/api/ping", (req, res) => res.json({ ok: true, msg: "pong" }));
-
-// Estimate proxy
+// === NY PRISBERÄKNINGS-ENDPOINT ===
 app.post("/api/estimate/badrum", async (req, res) => {
   try {
-    const url = process.env.SHEETS_WEBAPP_URL;
-    if (!url) return res.status(500).json({ ok: false, error: "Serverfel: Ingen koppling till Excel (URL saknas)." });
-
-    const r = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contents: JSON.stringify(req.body) }), // Double stringify for Google Apps Script
+    const inputs = req.body || {};
+    
+    // Anropa den lokala, omedelbara kalkylatorn
+    const priceResult = calculatePrice(inputs);
+    
+    res.json({
+      ok: true,
+      ...priceResult // Skicka tillbaka hela pris-objektet
     });
 
-    const data = await r.json();
-    if (!data.ok) return res.json({ ok: false, error: data.error || "Okänt fel från Google Sheet." });
-    
-    res.json(data);
   } catch (err) {
-    console.error("Proxy error:", err);
-    res.status(500).json({ ok: false, error: "Kunde inte kontakta kalkylbladet." });
+    console.error("Calculation error:", err);
+    res.status(500).json({ ok: false, error: err.message });
   }
 });
 
-// Serve frontend
+
+// Fallback till frontend-appen
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Jobryan offert server (LOKAL) körs på port ${PORT}`);
+});
