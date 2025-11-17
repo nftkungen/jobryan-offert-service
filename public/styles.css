@@ -270,3 +270,21 @@ input:focus, select:focus {
   .btn { flex: 1; } /* Full width buttons on mobile */
   body { padding: 16px; }
 }
+/* Stilar för den nya pris-specifikationen */
+.price-breakdown-list {
+  font-size: 13px;
+  color: var(--text-main);
+  margin-bottom: 12px;
+}
+.price-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+.price-item span:last-child {
+  font-weight: 600;
+}
+.price-item.rot span {
+  color: var(--success-dark);
+  font-weight: 600;
+}
