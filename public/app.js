@@ -7,7 +7,7 @@ const initialState = {
   // Kontakt
   kund_namn: "", kund_tel: "", kund_email: "", address: "",
   propertyType: "Lägenhet", era: "60-tal", floor: "3 tr", elevator: "Stor",
-  // Storlek (Defaults as numbers)
+  // Storlek
   postnummer: "", zon: "3", kvm_golv: 8.5, kvm_vagg: 0, takhojd: 2.4,
   // Val
   microcement_golv: "Nej", microcement_vagg: "Nej", gerade_horn_meter: 0, fyll_i_antal_meter: 0,
@@ -158,6 +158,7 @@ function renderSummary() {
   if (isLoading) {
     priceHtml = `<div class="summary-price-box loading"><div class="label">Beräknar pris...</div><div class="value">...</div></div>`;
   } else if (errorMsg) {
+    // **FIX:** Show the actual error text here
     priceHtml = `<div class="summary-price-box" style="background:#7f1d1d;"><div class="label">Fel</div><div class="value" style="font-size:14px;">${escapeHtml(errorMsg)}</div></div>`;
   } else if (displayPrice !== "–") {
     priceHtml = `<div class="summary-price-box"><div class="label">Preliminärt totalpris</div><div class="value">${displayPrice}</div></div><small class="muted">Pris inkl. moms & ROT.</small>`;
@@ -177,7 +178,6 @@ function calculateTotalFromParts(p) {
   if (!p || !p.ok) return null;
   const parse = v => { if (!v) return 0; const s = String(v).replace(/\s| /g, "").replace(",", "."); const n = Number(s); return isNaN(n) ? 0 : n; };
   
-  // Try explicit total
   if (p.pris_totalt_ink_moms) { const t = parse(p.pris_totalt_ink_moms); if (t > 0) return t; }
   
   const arb = parse(p.pris_arbete_ex_moms);
@@ -210,11 +210,9 @@ function wireEvents() {
       let v = t.value;
       if(t.type==="range" || t.type==="number") {
         v = v===""?"":Number(v);
-        // Sync slider
         if(t.classList.contains("slider-range")) t.nextElementSibling.querySelector("input").value=v;
         if(t.classList.contains("slider-number")) t.closest(".slider-container").querySelector("input").value=v;
       }
-      // Use strict update for numbers to avoid text issues
       setState({[t.dataset.field]: v}, false);
     }
   };
@@ -223,23 +221,21 @@ function wireEvents() {
 async function handleCalculate(bg) {
   if(!bg) setState({loading:true, error:""}, true);
   try {
-    // **CRITICAL FIX:** Manually enforce numbers for math fields, otherwise sheet sees strings
     const payload = { ...state }; 
     delete payload.loading; delete payload.error; delete payload.priceResult; delete payload.step;
     
-    // Ensure numeric fields are Numbers
-    const numericFields = ["kvm_golv", "kvm_vagg", "takhojd", "gerade_horn_meter", "fyll_i_antal_meter", "rivning_vaggar", "spotlight_antal", "zon"];
-    numericFields.forEach(f => payload[f] = Number(payload[f]) || 0);
-
     const r = await fetch(API_URL, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload)});
     const data = await r.json();
+    console.log("Sheet data:", data);
     
-    if(!data.ok) throw new Error("Kunde inte hämta pris.");
+    if(!data.ok) {
+        // **FIX:** Use the actual error message from the server
+        throw new Error(data.error || "Kunde inte hämta pris.");
+    }
     
     state.loading=false; state.priceResult=data;
     renderSummaryOnly();
     if(state.step === 9) document.getElementById("step").innerHTML = renderStep9();
-
   } catch(e) {
     console.error(e);
     state.loading=false; state.error=e.message;
