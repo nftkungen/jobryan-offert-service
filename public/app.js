@@ -168,11 +168,8 @@ const DEFAULT_VALUES = {
 
 // ---------- AUTO-CALCULATION LOGIC ----------
 
-// Create a "debounced" version of the calculation.
-// It waits 800ms after the last update before sending the request to the server.
-// This prevents flooding your Google Sheet with requests while typing.
 const triggerLivePrice = debounce(() => {
-  handleCalculate(true); // true = background mode (don't lock UI)
+  handleCalculate(true); 
 }, 800);
 
 function debounce(func, wait) {
@@ -201,15 +198,12 @@ function setState(patch) {
   
   render();
 
-  // If any field that affects price has changed, trigger a calculation
-  // We exclude UI fields like 'loading', 'error', 'step'
   const ignoreFields = ["loading", "error", "priceResult", "step"];
   const hasChanges = Object.keys(patch).some(k => !ignoreFields.includes(k));
 
   if (hasChanges) {
-    // Set loading state locally for the summary box immediately
     state.loading = true;
-    renderSummaryOnly(); // Re-render just the summary to show "Beräknar..."
+    renderSummaryOnly();
     triggerLivePrice();
   }
 }
@@ -217,16 +211,6 @@ function setState(patch) {
 function render() {
   const root = getRoot();
   if (!root) return;
-
-  // Only create layout once if possible, or just re-render inner
-  // For simplicity we re-render whole inner HTML but input focus might be lost
-  // if we are not careful. The current approach re-renders everything.
-  // To keep input focus, a Virtual DOM is usually used (React/Vue).
-  // Since we are using vanilla JS, we must be careful. 
-  // Ideally, we should only update the parts that changed.
-  // However, for this specific "app-like" request, full re-render on every keystroke
-  // might cause input focus loss.
-  // *FIX:* We will check if the layout exists.
 
   let layout = root.querySelector(".layout");
   if (!layout) {
@@ -242,18 +226,7 @@ function render() {
     layout = root.querySelector(".layout");
   }
 
-  // Update Header
   document.getElementById("wizard-header-container").innerHTML = renderHeader();
-  
-  // Update Step (only if step changed, otherwise we risk losing focus)
-  // We can cheat slightly: if the step container is empty or step changed, render.
-  // But updating inputs (like typing name) requires re-render to show value?
-  // Actually, native inputs hold their own state. We only need to re-render if structure changes.
-  // For this "Vanilla JS" approach, the safest way to keep focus is to NOT re-render the step 
-  // while typing.
-  // -> We will only re-render the step container if the *step number* changed.
-  // -> If we are just typing, we rely on the input event to update 'state', 
-  //    but we don't destroy the DOM.
   
   const stepContainer = document.getElementById("wizard-step-container");
   const currentRenderedStep = stepContainer.dataset.step;
@@ -261,10 +234,8 @@ function render() {
   if (currentRenderedStep !== String(state.step)) {
     stepContainer.innerHTML = renderStep();
     stepContainer.dataset.step = state.step;
-    wireStepEvents(stepContainer); // Re-attach events for new step
   }
 
-  // Update Summary (always safe to re-render)
   renderSummaryOnly();
 }
 
@@ -616,7 +587,6 @@ function renderSummary() {
       return `<li class="summary-item">${label}: <strong>${escapeHtml(value)}</strong></li>`;
     }).filter(Boolean);
 
-  // Show loading state or price
   let priceHtml = "";
   if (isLoading) {
     priceHtml = `
@@ -684,17 +654,10 @@ function renderSummary() {
 // ---------- WIRING EVENTS ----------
 
 function wireEvents() {
-  // This function is only called once at the start because we now use event delegation
-  // or we re-attach events in the render loop if DOM was destroyed.
-  // In this logic, we rely on 'oninput' and 'onclick' for static elements, 
-  // but step elements are re-rendered. 
-  // Best practice in vanilla JS is to re-attach listeners after render.
   const root = getRoot();
   if (!root) return;
 
-  // We can attach a global listener for data-pill clicks to avoid re-attaching constantly
   root.addEventListener("click", (e) => {
-    // Pills
     const pill = e.target.closest("[data-pill]");
     if (pill) {
       const field = pill.dataset.field;
@@ -702,12 +665,8 @@ function wireEvents() {
       setState({ [field]: value });
       return;
     }
-
-    // Navigation
     if (e.target.closest("[data-next]")) handleNext();
     if (e.target.closest("[data-prev]")) handlePrev();
-    
-    // Slider Range (if needed specific logic, but 'input' covers it)
   });
 
   root.addEventListener("input", (e) => {
@@ -721,14 +680,6 @@ function wireEvents() {
       setState({ [field]: value });
     }
   });
-  
-  // Wire events for the first render
-  wireStepEvents(document.getElementById("wizard-step-container"));
-}
-
-function wireStepEvents(container) {
-  // If we needed specific listeners for the step, we'd add them here.
-  // Since we used delegation on 'root' above, this can be empty or special cases.
 }
 
 function handleNext() {
@@ -807,7 +758,6 @@ async function handleCalculate(isBackground = false) {
       throw new Error(data.error || "Beräkningen misslyckades");
     }
 
-    // Update price without re-rendering the whole app (prevents input jump)
     state.loading = false;
     state.priceResult = data;
     renderSummaryOnly(); 
@@ -834,5 +784,7 @@ function escapeHtml(str) {
   return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-// Init
-document.addEventListener("DOMContentLoaded", render);
+document.addEventListener("DOMContentLoaded", () => {
+  render();
+  wireEvents();
+});
