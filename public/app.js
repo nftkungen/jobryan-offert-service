@@ -192,11 +192,6 @@ function getRoot() {
   );
 }
 
-/**
- * setState updates the app state.
- * @param {Object} patch - The new data to update
- * @param {Boolean} shouldRender - If true, re-draws the entire step (used for clicks). If false, skips re-draw (used for typing).
- */
 function setState(patch, shouldRender = true) {
   const oldState = { ...state };
   state = { ...state, ...patch };
@@ -204,7 +199,6 @@ function setState(patch, shouldRender = true) {
   if (shouldRender) {
     render();
   } else {
-    // Always update the summary even if we don't re-draw the inputs
     renderSummaryOnly();
   }
 
@@ -238,7 +232,6 @@ function render() {
 
   document.getElementById("wizard-header-container").innerHTML = renderHeader();
   
-  // Always render the step to ensure buttons update visual state
   const stepContainer = document.getElementById("wizard-step-container");
   stepContainer.innerHTML = renderStep();
 
@@ -583,6 +576,7 @@ function pillGroup(label, field, options) {
 function renderSummary() {
   const p = state.priceResult;
   const isLoading = state.loading;
+  const errorMsg = state.error;
 
   const selectedOptions = Object.keys(SUMMARY_LABELS).map(key => {
       const value = String(state[key]);
@@ -600,6 +594,15 @@ function renderSummary() {
          <div class="label">Beräknar pris...</div>
          <div class="value">...</div>
       </div>`;
+  } else if (errorMsg) {
+    // SHOW ERROR HERE
+    priceHtml = `
+      <div class="summary-price-box" style="background:#7f1d1d;">
+         <div class="label">Fel vid beräkning</div>
+         <div class="value" style="font-size:14px;">${escapeHtml(errorMsg)}</div>
+      </div>
+      <small class="muted">Kontrollera internet eller kontakta support.</small>
+    `;
   } else if (p && p.ok) {
     priceHtml = `
       <div class="summary-price-box">
@@ -663,11 +666,7 @@ function wireEvents() {
   const root = getRoot();
   if (!root) return;
 
-  // EVENT DELEGATION
-
-  // 1. Click Handler
   root.addEventListener("click", (e) => {
-    // Pills - triggers Render (True)
     const pill = e.target.closest("[data-pill]");
     if (pill) {
       const field = pill.dataset.field;
@@ -675,12 +674,10 @@ function wireEvents() {
       setState({ [field]: value }, true); 
       return;
     }
-    // Nav Buttons
     if (e.target.closest("[data-next]")) handleNext();
     if (e.target.closest("[data-prev]")) handlePrev();
   });
 
-  // 2. Input Handler
   root.addEventListener("input", (e) => {
     const el = e.target;
     if (el.dataset.field) {
