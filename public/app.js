@@ -206,7 +206,6 @@ function render() {
   wireEvents();
 }
 
-// Changed total steps to 9 (Step 1 & 2 merged)
 const TOTAL_STEPS = 9;
 
 function renderHeader() {
@@ -226,7 +225,7 @@ function renderHeader() {
 function renderStep() {
   switch (state.step) {
     case 1:
-      return renderStep1_Grunddata(); // Merged Step
+      return renderStep1_Grunddata(); 
     case 2:
       return renderStep2_Ytskikt();
     case 3:
@@ -248,7 +247,7 @@ function renderStep() {
   }
 }
 
-// --- Step 1: Grunddata & Fastighet (Merged) ---
+// --- Step 1: Grunddata & Fastighet ---
 function renderStep1_Grunddata() {
   return `
     <section class="card">
@@ -311,10 +310,17 @@ function renderStep1_Grunddata() {
           </select>
         </div>
 
-        <div class="field field-slider">
+        <div class="field" style="grid-column: 1 / -1;">
           <label>Storlek (golvyta)</label>
-          <input type="range" min="2" max="20" step="0.5" data-field="kvm_golv" value="${state.kvm_golv}">
-          <div class="slider-value">${state.kvm_golv} m²</div>
+          <div class="slider-container">
+             <input type="range" min="2" max="20" step="0.5" 
+                    data-field="kvm_golv" value="${state.kvm_golv}" class="slider-range">
+             <div class="slider-input-wrap">
+               <input type="number" min="0" step="0.1" 
+                      data-field="kvm_golv" value="${state.kvm_golv}" class="slider-number">
+               <span class="suffix">m²</span>
+             </div>
+          </div>
         </div>
 
         <div class="field">
