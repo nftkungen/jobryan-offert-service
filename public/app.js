@@ -2,9 +2,8 @@
 
 const API_URL = "/api/estimate/badrum";
 
-// Uppdaterad initialState med korrekta värden för B50
 const initialState = {
-  step: 1, 
+  step: 1,
   // Kontakt
   kund_namn: "", kund_tel: "", kund_email: "", address: "",
   propertyType: "Lägenhet", era: "60-tal", floor: "3 tr", elevator: "Stor",
@@ -21,10 +20,9 @@ const initialState = {
   tvattmaskin: "Nej", torktumlare: "Nej", torkskap: "Nej", varme_vp: "Nej",
   golvvärme: "Nej", handdukstork: "Nej", 
   
-  // *** VIKTIGT: Ändrat default till "Standard" för att matcha Excel ***
+  // *** FIX: MUST BE "Standard" TO MATCH EXCEL VALIDATION ***
   takbelysning: "Standard", spotlight_antal: 0,
   
-  // System
   loading: false, error: "", priceResult: null
 };
 
@@ -34,15 +32,13 @@ let state = { ...initialState };
 const YES_NO = ["Nej", "Ja"];
 const WC_OPTS = ["Ingen WC", "Golvmonterad WC", "Väggmonterad WC"];
 
-// *** VIKTIGT: Dessa måste matcha Excel-arkets meny exakt ***
-const TAKBELYSNING_OPTS = ["Standard", "Spotlights"];
+// *** FIX: Renamed "Plafond" -> "Standard" to match Excel validation rules ***
+const TAKBELYSNING_OPTS = ["Standard", "Spotlights"]; // Changed "Spots i tak" to "Spotlights" if needed, usually safest.
 
 const INCLUDED_OPTIONS = {
   duschblandare: ["Standard"], tvattstallsblandare: ["Standard"], tvattstall_kommod: ["Kommod utan el"],
   wc: ["Ingen WC"], brunn: ["Standard"], golvvärme: ["Nej"], handdukstork: ["Nej"],
-  // Matchar "Standard"
-  takbelysning: ["Standard"], 
-  tvattmaskin: ["Nej"], torktumlare: ["Nej"], torkskap: ["Nej"],
+  takbelysning: ["Standard"], tvattmaskin: ["Nej"], torktumlare: ["Nej"], torkskap: ["Nej"],
   inklakat_badkar: ["Nej"], varme_vp: ["Nej"], dolda_ror: ["Nej"]
 };
 
@@ -69,7 +65,7 @@ const DEFAULT_VALUES = {
   takbelysning: "Standard", spotlight_antal: "0",
 };
 
-// Auto-calculate debouncer
+// Auto-calculate
 const triggerLivePrice = debounce(() => handleCalculate(true), 800);
 function debounce(func, wait) {
   let timeout;
@@ -80,7 +76,6 @@ function debounce(func, wait) {
   };
 }
 
-// --- Render ---
 function getRoot() { return document.getElementById("js-root") || document.getElementById("app"); }
 
 function setState(patch, shouldRender = true) {
@@ -222,11 +217,9 @@ function wireEvents() {
       let v = t.value;
       if(t.type==="range" || t.type==="number") {
         v = v===""?"":Number(v);
-        // Sync slider
         if(t.classList.contains("slider-range")) t.nextElementSibling.querySelector("input").value=v;
         if(t.classList.contains("slider-number")) t.closest(".slider-container").querySelector("input").value=v;
       }
-      // Use strict update for numbers to avoid text issues
       setState({[t.dataset.field]: v}, false);
     }
   };
@@ -236,16 +229,15 @@ async function handleCalculate(bg) {
   if(!bg) setState({loading:true, error:""}, true);
   try {
     // CLEAN PAYLOAD: No type forcing, just pass state
-    const payload = { ...state }; 
+    const payload = { ...state };
     delete payload.loading; delete payload.error; delete payload.priceResult; delete payload.step;
     
     const r = await fetch(API_URL, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload)});
     const data = await r.json();
-    console.log("Sheet data:", data);
     
     if(!data.ok) {
-        // **FIX:** Use the actual error message from the server
-        throw new Error(data.error || "Kunde inte hämta pris.");
+       // Capture the Google Sheet error properly
+       throw new Error(data.error || "Kunde inte hämta pris.");
     }
     
     state.loading=false; state.priceResult=data;
