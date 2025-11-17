@@ -2,6 +2,7 @@
 
 const API_URL = "/api/estimate/badrum";
 
+// Uppdaterad initialState med korrekta värden för B50
 const initialState = {
   step: 1, 
   // Kontakt
@@ -18,7 +19,11 @@ const initialState = {
   brunn: "Standard", duschblandare: "Standard", tvattstallsblandare: "Standard",
   tvattstall_kommod: "Kommod utan el", inklakat_badkar: "Nej",
   tvattmaskin: "Nej", torktumlare: "Nej", torkskap: "Nej", varme_vp: "Nej",
-  golvvärme: "Nej", handdukstork: "Nej", takbelysning: "Plafond", spotlight_antal: 0,
+  golvvärme: "Nej", handdukstork: "Nej", 
+  
+  // *** VIKTIGT: Ändrat default till "Standard" för att matcha Excel ***
+  takbelysning: "Standard", spotlight_antal: 0,
+  
   // System
   loading: false, error: "", priceResult: null
 };
@@ -28,13 +33,19 @@ let state = { ...initialState };
 // Lists
 const YES_NO = ["Nej", "Ja"];
 const WC_OPTS = ["Ingen WC", "Golvmonterad WC", "Väggmonterad WC"];
-const TAKBELYSNING_OPTS = ["Plafond", "Spots i tak"];
+
+// *** VIKTIGT: Dessa måste matcha Excel-arkets meny exakt ***
+const TAKBELYSNING_OPTS = ["Standard", "Spotlights"];
+
 const INCLUDED_OPTIONS = {
   duschblandare: ["Standard"], tvattstallsblandare: ["Standard"], tvattstall_kommod: ["Kommod utan el"],
   wc: ["Ingen WC"], brunn: ["Standard"], golvvärme: ["Nej"], handdukstork: ["Nej"],
-  takbelysning: ["Plafond"], tvattmaskin: ["Nej"], torktumlare: ["Nej"], torkskap: ["Nej"],
+  // Matchar "Standard"
+  takbelysning: ["Standard"], 
+  tvattmaskin: ["Nej"], torktumlare: ["Nej"], torkskap: ["Nej"],
   inklakat_badkar: ["Nej"], varme_vp: ["Nej"], dolda_ror: ["Nej"]
 };
+
 const SUMMARY_LABELS = {
   microcement_golv: "Microcement golv", microcement_vagg: "Microcement vägg", gerade_horn_meter: "Gerade hörn",
   fyll_i_antal_meter: "Fris", ny_troskel: "Ny tröskel", byta_dorrblad: "Byte av dörrblad",
@@ -46,6 +57,7 @@ const SUMMARY_LABELS = {
   tvattmaskin: "Tvättmaskin", torktumlare: "Torktumlare", torkskap: "Torkskåp", varme_vp: "Värme VP",
   golvvärme: "Golvvärme", handdukstork: "Handdukstork", takbelysning: "Takbelysning", spotlight_antal: "Spotlights",
 };
+
 const DEFAULT_VALUES = {
   microcement_golv: "Nej", microcement_vagg: "Nej", gerade_horn_meter: "0", fyll_i_antal_meter: "0",
   ny_troskel: "Nej", byta_dorrblad: "Nej", byta_karm_dorr: "Nej", slipning_dorr: "Nej",
@@ -53,7 +65,8 @@ const DEFAULT_VALUES = {
   nya_vaggar_material: "Nej / bestäms senare", dolda_ror: "Nej", wc: "Ingen WC", byte_av_avloppsgroda: "Nej",
   ny_slitsbotten: "Nej", brunn: "Standard", duschblandare: "Standard", tvattstallsblandare: "Standard",
   tvattstall_kommod: "Kommod utan el", inklakat_badkar: "Nej", tvattmaskin: "Nej", torktumlare: "Nej",
-  torkskap: "Nej", varme_vp: "Nej", golvvärme: "Nej", handdukstork: "Nej", takbelysning: "Plafond", spotlight_antal: "0",
+  torkskap: "Nej", varme_vp: "Nej", golvvärme: "Nej", handdukstork: "Nej", 
+  takbelysning: "Standard", spotlight_antal: "0",
 };
 
 // Auto-calculate debouncer
@@ -158,7 +171,6 @@ function renderSummary() {
   if (isLoading) {
     priceHtml = `<div class="summary-price-box loading"><div class="label">Beräknar pris...</div><div class="value">...</div></div>`;
   } else if (errorMsg) {
-    // **FIX:** Show the actual error text here
     priceHtml = `<div class="summary-price-box" style="background:#7f1d1d;"><div class="label">Fel</div><div class="value" style="font-size:14px;">${escapeHtml(errorMsg)}</div></div>`;
   } else if (displayPrice !== "–") {
     priceHtml = `<div class="summary-price-box"><div class="label">Preliminärt totalpris</div><div class="value">${displayPrice}</div></div><small class="muted">Pris inkl. moms & ROT.</small>`;
@@ -210,9 +222,11 @@ function wireEvents() {
       let v = t.value;
       if(t.type==="range" || t.type==="number") {
         v = v===""?"":Number(v);
+        // Sync slider
         if(t.classList.contains("slider-range")) t.nextElementSibling.querySelector("input").value=v;
         if(t.classList.contains("slider-number")) t.closest(".slider-container").querySelector("input").value=v;
       }
+      // Use strict update for numbers to avoid text issues
       setState({[t.dataset.field]: v}, false);
     }
   };
@@ -221,6 +235,7 @@ function wireEvents() {
 async function handleCalculate(bg) {
   if(!bg) setState({loading:true, error:""}, true);
   try {
+    // CLEAN PAYLOAD: No type forcing, just pass state
     const payload = { ...state }; 
     delete payload.loading; delete payload.error; delete payload.priceResult; delete payload.step;
     
