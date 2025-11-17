@@ -192,18 +192,28 @@ function getRoot() {
   );
 }
 
-function setState(patch) {
+/**
+ * setState updates the app state.
+ * @param {Object} patch - The new data to update
+ * @param {Boolean} shouldRender - If true, re-draws the entire step (used for clicks). If false, skips re-draw (used for typing).
+ */
+function setState(patch, shouldRender = true) {
   const oldState = { ...state };
   state = { ...state, ...patch };
   
-  render();
+  if (shouldRender) {
+    render();
+  } else {
+    // Always update the summary even if we don't re-draw the inputs
+    renderSummaryOnly();
+  }
 
   const ignoreFields = ["loading", "error", "priceResult", "step"];
   const hasChanges = Object.keys(patch).some(k => !ignoreFields.includes(k));
 
   if (hasChanges) {
     state.loading = true;
-    renderSummaryOnly();
+    renderSummaryOnly(); // Show "Beräknar..." immediately
     triggerLivePrice();
   }
 }
@@ -228,13 +238,9 @@ function render() {
 
   document.getElementById("wizard-header-container").innerHTML = renderHeader();
   
+  // Always render the step to ensure buttons update visual state
   const stepContainer = document.getElementById("wizard-step-container");
-  const currentRenderedStep = stepContainer.dataset.step;
-  
-  if (currentRenderedStep !== String(state.step)) {
-    stepContainer.innerHTML = renderStep();
-    stepContainer.dataset.step = state.step;
-  }
+  stepContainer.innerHTML = renderStep();
 
   renderSummaryOnly();
 }
@@ -657,18 +663,24 @@ function wireEvents() {
   const root = getRoot();
   if (!root) return;
 
+  // EVENT DELEGATION
+
+  // 1. Click Handler
   root.addEventListener("click", (e) => {
+    // Pills - triggers Render (True)
     const pill = e.target.closest("[data-pill]");
     if (pill) {
       const field = pill.dataset.field;
       const value = pill.dataset.value;
-      setState({ [field]: value });
+      setState({ [field]: value }, true); 
       return;
     }
+    // Nav Buttons
     if (e.target.closest("[data-next]")) handleNext();
     if (e.target.closest("[data-prev]")) handlePrev();
   });
 
+  // 2. Input Handler
   root.addEventListener("input", (e) => {
     const el = e.target;
     if (el.dataset.field) {
@@ -676,28 +688,39 @@ function wireEvents() {
       let value = el.value;
       if (el.type === "number" || el.type === "range") {
         value = value === "" ? "" : Number(value);
+        
+        // Sync slider visual immediately to avoid delay
+        if (el.classList.contains("slider-range")) {
+           const numInput = el.nextElementSibling.querySelector("input");
+           if (numInput) numInput.value = value;
+        }
+        if (el.classList.contains("slider-number")) {
+           const rangeInput = el.closest(".slider-container").querySelector(".slider-range");
+           if (rangeInput) rangeInput.value = value;
+        }
       }
-      setState({ [field]: value });
+      // Trigger state update BUT skip full re-render to keep focus
+      setState({ [field]: value }, false);
     }
   });
 }
 
 function handleNext() {
   if (state.step < TOTAL_STEPS) {
-    setState({ step: state.step + 1 });
+    setState({ step: state.step + 1 }, true);
   }
 }
 
 function handlePrev() {
   if (state.step > 1) {
-    setState({ step: state.step - 1 });
+    setState({ step: state.step - 1 }, true);
   }
 }
 
 async function handleCalculate(isBackground = false) {
   try {
     if (!isBackground) {
-        setState({ loading: true, error: "" });
+        setState({ loading: true, error: "" }, true);
     }
 
     const payload = {
