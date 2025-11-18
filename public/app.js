@@ -124,31 +124,28 @@ function renderStep8() { return `<section class="card"><h2>8. El</h2><div class=
 function renderStep9() {
   const { loading, error, priceResult } = state;
   const hasPrice = priceResult && priceResult.ok;
-  const total = calculateTotalFromParts(priceResult);
-  const displayPrice = formatKr(total);
+  const total = priceResult ? formatKr(priceResult.pris_totalt_ink_moms) : "–";
 
   let content = "";
 
   if (!hasPrice) {
-    // STATE 1: Show Big Button
     content = `
       <p>Kontrollera uppgifterna nedan och klicka på knappen för att hämta pris.</p>
       ${error ? `<div class="alert alert-error">${escapeHtml(error)}</div>` : ""}
       <div style="margin: 30px 0;">
-        <button class="btn btn-primary" style="width:100%; padding:15px; font-size:16px; justify-content:center;" onclick="handleCalculate(false)">
-          ${loading ? "Beräknar..." : "Hämta pris nu"}
+        <button class="btn btn-primary" style="width:100%; padding:15px; font-size:16px; justify-content:center;" onclick="handleCalculate()">
+          ${loading ? "Beräknar..." : "Beräkna pris nu"}
         </button>
       </div>`;
   } else {
-    // STATE 2: Show Price
     content = `
       <div class="price-result">
-        <h3>Preliminärt totalpris: ${displayPrice}</h3>
+        <h3>Preliminärt totalpris: ${total}</h3>
         <p class="muted">Specifikation skickas till e-post vid bekräftelse.</p>
       </div>
       <div class="actions">
         <button class="btn btn-ghost" data-prev>Tillbaka</button>
-        <button class="btn btn-primary" onclick="alert('Offert skickad!')">Skicka offert</button>
+        <button class="btn btn-primary" onclick="alert('Offert sparad!')">Skicka offert</button>
       </div>`;
   }
 
@@ -170,10 +167,7 @@ function renderSummary() {
       return `<li class="summary-item">${SUMMARY_LABELS[key]}: <strong>${escapeHtml(val)}</strong></li>`;
   }).filter(Boolean).join("");
   
-  // Always show "–" until we have a confirmed result
-  const hasPrice = p && p.ok;
-  const total = calculateTotalFromParts(p);
-  const displayPrice = hasPrice ? formatKr(total) : "–";
+  const displayPrice = (p && p.ok) ? formatKr(p.pris_totalt_ink_moms) : "–";
 
   return `<aside class="summary card"><div class="summary-header"><h2>Summering</h2><p class="muted">Dina val.</p></div><div class="summary-block"><h3>Fastighet</h3><div class="summary-text">${state.address||"-"}, ${state.era}<br>${state.floor}, hiss: ${state.elevator}</div></div><div class="summary-block"><h3>Badrum</h3><div class="summary-text">Golv: ${state.kvm_golv} m²</div></div><div class="summary-block"><h3>Tillval</h3><ul class="summary-item-list">${listItems || '<li class="summary-item-empty">Inga valda</li>'}</ul></div><div class="summary-block"><h3>Kostnad</h3><div class="summary-price-box"><div class="label">Preliminärt totalpris</div><div class="value">${displayPrice}</div></div></div></aside>`;
 }
@@ -182,19 +176,6 @@ function renderSummary() {
 function inp(lbl, field, type="text") { return `<div class="field"><label>${lbl}</label><input type="${type}" data-field="${field}" value="${escapeHtml(state[field])}"></div>`; }
 function opts(arr, sel) { return arr.map(v => `<option value="${escapeHtml(v)}" ${v===sel?"selected":""}>${escapeHtml(v)}</option>`).join(""); }
 function pill(lbl, field, optsArr) { return `<div class="field field-pills"><label>${lbl}</label><div class="pill-row">${optsArr.map(o => { const active = String(state[field]) === String(o); const included = INCLUDED_OPTIONS[field]?.includes(String(o)); return `<button type="button" class="pill ${active?(included?"pill--on pill--included":"pill--on"):"pill--off"}" data-pill data-field="${field}" data-value="${escapeHtml(String(o))}">${escapeHtml(String(o))}</button>`; }).join("")}</div></div>`; }
-
-// Logic
-function calculateTotalFromParts(p) {
-  if (!p || !p.ok) return null;
-  const parse = v => { if (!v) return 0; const s = String(v).replace(/\s| /g, "").replace(",", "."); const n = Number(s); return isNaN(n) ? 0 : n; };
-  if (p.pris_totalt_ink_moms) { const t = parse(p.pris_totalt_ink_moms); if (t > 0) return t; }
-  const arb = parse(p.pris_arbete_ex_moms);
-  const mat = parse(p.pris_grundmaterial_ex_moms);
-  const res = parse(p.pris_resekostnad_ex_moms);
-  const sop = parse(p.pris_sophantering_ex_moms);
-  const sumEx = arb + mat + res + sop;
-  return sumEx === 0 ? null : sumEx * 1.25;
-}
 
 function formatKr(num) {
   if (num == null) return "–";
@@ -207,13 +188,13 @@ function wireEvents() {
   const root = getRoot();
   if(!root) return;
   
-  window.handleCalculate = handleCalculate; // Make global for button
+  window.handleCalculate = handleCalculate; 
 
   root.onclick = e => {
     const p = e.target.closest("[data-pill]");
     if(p) setState({[p.dataset.field]: p.dataset.value}, true);
-    if(e.target.closest("[data-next]")) { if(state.step<9) setState({step:state.step+1, priceResult: null, error: ""}, true); } // Reset price on nav
-    if(e.target.closest("[data-prev]")) { if(state.step>1) setState({step:state.step-1, priceResult: null, error: ""}, true); } // Reset price on nav
+    if(e.target.closest("[data-next]")) { if(state.step<9) setState({step:state.step+1, priceResult: null, error: ""}, true); } 
+    if(e.target.closest("[data-prev]")) { if(state.step>1) setState({step:state.step-1, priceResult: null, error: ""}, true); } 
   };
   root.oninput = e => {
     const t = e.target;
@@ -229,7 +210,7 @@ function wireEvents() {
   };
 }
 
-async function handleCalculate(bg) {
+async function handleCalculate() {
   setState({loading:true, error:""}, true);
   try {
     const payload = { ...state }; 
@@ -237,23 +218,18 @@ async function handleCalculate(bg) {
     
     const r = await fetch(API_URL, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload)});
     const data = await r.json();
-    console.log("Sheet data:", data);
     
     if(!data.ok) throw new Error(data.error || "Kunde inte hämta pris.");
     
     state.loading=false; 
     state.priceResult=data;
-    
-    // Force re-render of step 9 to show result
-    document.getElementById("step").innerHTML = renderStep9();
-    renderSummaryOnly();
+    render(); 
     
   } catch(e) {
     console.error(e);
     state.loading=false; 
     state.error=e.message;
-    document.getElementById("step").innerHTML = renderStep9();
-    renderSummaryOnly();
+    render();
   }
 }
 
